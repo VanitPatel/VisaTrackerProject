@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisaTrack Pro — Interactive Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d47;
+    --accent: #00e5c3;
+    --accent2: #0070f3;
+    --accent3: #f59e0b;
+    --text: #e8edf5;
+    --text-muted: #6b7d99;
+    --text-dim: #3d4f6b;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --radius: 12px;
+    --radius-lg: 20px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ─── PROTOTYPE SHELL ─── */
+  #app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ─── LEFT NAV ─── */
+  #storyboard-nav {
+    width: 220px;
+    flex-shrink: 0;
+    background: #070b14;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+
+  .nav-logo {
+    padding: 0 18px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .nav-logo .brand {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  .nav-logo .sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .nav-section-label {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 18px 4px;
+    font-weight: 500;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(0,229,195,0.06);
+    font-weight: 500;
+  }
+  .nav-item .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .nav-item.active .dot { background: var(--accent); }
+
+  /* ─── MAIN VIEWPORT ─── */
+  #viewport {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ─── TOP BAR ─── */
+  #topbar {
+    height: 44px;
+    background: #070b14;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .tb-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .tb-screen-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .tb-badge {
+    background: rgba(0,229,195,0.12);
+    color: var(--accent);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: auto;
+    letter-spacing: 0.5px;
+  }
+  .nav-arrows {
+    display: flex; gap: 4px; margin-left: 8px;
+  }
+  .nav-btn {
+    width: 26px; height: 26px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ─── SCREEN CONTAINER ─── */
+  #screen-container {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .screen {
+    display: none;
+    animation: fadeIn 0.25s ease;
+    min-height: 100%;
+  }
+  .screen.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ══════════════════════════════════
+     SCREEN 1 — ONBOARDING / SPLASH
+  ══════════════════════════════════ */
+  #screen-splash {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    position: relative;
+    overflow: hidden;
+    padding: 60px 40px;
+  }
+  .splash-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,195,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,195,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .splash-glow {
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,229,195,0.12) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -60%);
+    pointer-events: none;
+  }
+  .splash-content { position: relative; z-index: 1; text-align: center; max-width: 500px; }
+  .splash-logo-mark {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 28px;
+    box-shadow: 0 0 40px rgba(0,229,195,0.3);
+  }
+  .splash-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .splash-title span { color: var(--accent); }
+  .splash-sub {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 36px;
+  }
+  .splash-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--accent);
+    color: #070b14;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 12px 28px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0,229,195,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(0,229,195,0.4); }
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 12px 28px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .splash-features {
+    display: flex; gap: 16px; margin-top: 40px; flex-wrap: wrap; justify-content: center;
+  }
+  .splash-feat {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .splash-feat .icon { color: var(--accent); font-size: 14px; }
+
+  /* ══════════════════════════════════
+     SCREEN 2 — SIGN UP
+  ══════════════════════════════════ */
+  #screen-signup {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100%; padding: 40px;
+    background: var(--bg);
+  }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 100%; max-width: 420px;
+    padding: 36px;
+  }
+  .auth-header { margin-bottom: 28px; }
+  .auth-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .auth-sub { font-size: 13px; color: var(--text-muted); }
+
+  .user-type-tabs {
+    display: flex; gap: 6px; margin-bottom: 24px;
+    background: var(--surface2);
+    padding: 4px; border-radius: 10px;
+  }
+  .ut-tab {
+    flex: 1; padding: 7px 8px;
+    border-radius: 7px; border: none;
+    background: transparent; color: var(--text-muted);
+    font-size: 11px; cursor: pointer;
+    transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+    text-align: center;
+  }
+  .ut-tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
+  .form-input {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; color: var(--text);
+    font-size: 13px; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-group { flex: 1; }
+  .auth-divider {
+    text-align: center; font-size: 11px; color: var(--text-dim);
+    margin: 16px 0; position: relative;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; position: absolute;
+    top: 50%; width: calc(50% - 24px);
+    height: 1px; background: var(--border);
+  }
+  .auth-divider::before { left: 0; }
+  .auth-divider::after { right: 0; }
+  .auth-link { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 16px; }
+  .auth-link span { color: var(--accent); cursor: pointer; }
+
+  /* ══════════════════════════════════
+     SCREEN 3 — INDIVIDUAL DASHBOARD
+  ══════════════════════════════════ */
+  #screen-dashboard {
+    padding: 28px;
+    background: var(--bg);
+    min-height: 100%;
+  }
+  .page-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; margin-bottom: 28px;
+  }
+  .page-greeting { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; }
+  .page-date { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px;
+    transition: all 0.15s; color: var(--text-muted);
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .notif-badge { position: relative; }
+  .notif-badge::after {
+    content: '3';
+    position: absolute; top: -4px; right: -4px;
+    background: var(--danger); color: white;
+    font-size: 9px; width: 16px; height: 16px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; }
+  .stat-change { font-size: 11px; color: var(--success); margin-top: 4px; }
+  .stat-change.warn { color: var(--warn); }
+
+  /* Active case card */
+  .section-title {
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+  .case-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px; margin-bottom: 14px;
+    cursor: pointer; transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .case-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 3px 0 0 3px;
+  }
+  .case-card.warn::before { background: var(--warn); }
+  .case-card.pending::before { background: var(--accent2); }
+  .case-card:hover { border-color: rgba(0,229,195,0.3); transform: translateY(-1px); }
+
+  .case-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .case-visa-type {
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+  }
+  .case-number { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .status-pill {
+    font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    font-weight: 600; letter-spacing: 0.3px;
+  }
+  .status-pill.active { background: rgba(16,185,129,0.15); color: var(--success); }
+  .status-pill.pending { background: rgba(0,112,243,0.15); color: var(--accent2); }
+  .status-pill.review { background: rgba(245,158,11,0.15); color: var(--warn); }
+  .status-pill.approved { background: rgba(0,229,195,0.15); color: var(--accent); }
+
+  .case-progress { margin: 12px 0; }
+  .progress-steps { display: flex; align-items: center; gap: 0; margin-bottom: 8px; }
+  .step {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    position: relative;
+  }
+  .step:not(:last-child)::after {
+    content: ''; position: absolute;
+    top: 7px; left: 50%;
+    width: 100%; height: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .step.done:not(:last-child)::after { background: var(--accent); }
+  .step-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%; border: 2px solid var(--border);
+    background: var(--surface2); position: relative; z-index: 1;
+  }
+  .step.done .step-dot { background: var(--accent); border-color: var(--accent); }
+  .step.current .step-dot { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,195,0.2); background: var(--surface2); }
+  .step-label { font-size: 9px; color: var(--text-dim); margin-top: 4px; text-align: center; }
+  .step.done .step-label, .step.current .step-label { color: var(--text-muted); }
+
+  .case-meta { display: flex; gap: 20px; }
+  .case-meta-item { font-size: 11px; color: var(--text-muted); }
+  .case-meta-item strong { color: var(--text); display: block; font-size: 12px; margin-bottom: 1px; }
+
+  /* Grid layout */
+  .dashboard-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+  .grid-main { min-width: 0; }
+  .grid-side {}
+
+  /* Timeline */
+  .timeline { }
+  .timeline-item {
+    display: flex; gap: 14px; padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .tl-green { background: rgba(16,185,129,0.15); }
+  .tl-blue { background: rgba(0,112,243,0.15); }
+  .tl-yellow { background: rgba(245,158,11,0.15); }
+  .timeline-content { flex: 1; }
+  .tl-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+  .tl-time { font-size: 11px; color: var(--text-muted); }
+
+  /* Upcoming */
+  .upcoming-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; background: var(--surface2);
+    border-radius: 9px; margin-bottom: 8px;
+  }
+  .upcoming-date {
+    text-align: center; min-width: 36px;
+  }
+  .upd-month { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+  .upd-day { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .upcoming-info { flex: 1; }
+  .ui-title { font-size: 12px; font-weight: 500; }
+  .ui-sub { font-size: 11px; color: var(--text-muted); }
+
+  /* Quick actions */
+  .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .qa-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    cursor: pointer; transition: all 0.2s;
+    text-align: center; color: var(--text);
+  }
+  .qa-btn:hover { border-color: var(--accent); background: rgba(0,229,195,0.04); }
+  .qa-icon { font-size: 20px; margin-bottom: 6px; }
+  .qa-label { font-size: 11px; font-weight: 500; }
+
+  /* ══════════════════════════════════
+     SCREEN 4 — CASE DETAIL
+  ══════════════════════════════════ */
+  #screen-case-detail { padding: 28px; background: var(--bg); min-height: 100%; }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+    cursor: pointer; margin-bottom: 24px;
+    transition: color 0.15s;
+  }
+  .back-btn:hover { color: var(--accent); }
+
+  .case-hero {
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px; margin-bottom: 24px;
+    position: relative; overflow: hidden;
+  }
+  .case-hero::after {
+    content: 'H-1B';
+    position: absolute; right: -10px; top: -20px;
+    font-family: 'Syne', sans-serif; font-size: 120px; font-weight: 800;
+    color: rgba(0,229,195,0.04); line-height: 1;
+    pointer-events: none; user-select: none;
+  }
+  .case-hero-top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .case-hero-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .case-hero-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .case-hero-meta {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px;
+  }
+  .chm-item { }
+  .chm-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .chm-value { font-size: 14px; font-weight: 600; }
+
+  /* Timeline detail */
+  .detail-grid { display: grid; grid-template-columns: 1fr 280px; gap: 20px; }
+
+  .detailed-timeline { position: relative; }
+  .dt-item {
+    display: flex; gap: 16px; margin-bottom: 20px;
+    position: relative;
+  }
+  .dt-line {
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .dt-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface2); flex-shrink: 0; position: relative; z-index: 1;
+  }
+  .dt-dot.done { background: var(--accent); border-color: var(--accent); }
+  .dt-dot.current { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0,229,195,0.2); }
+  .dt-dot.upcoming { }
+  .dt-connector {
+    width: 2px; flex: 1; background: var(--border); margin-top: 2px;
+  }
+  .dt-connector.done { background: var(--accent); }
+  .dt-body {
+    flex: 1; padding-bottom: 8px;
+  }
+  .dt-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .dt-date { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .dt-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .dt-tag {
+    display: inline-block; font-size: 10px; padding: 2px 8px;
+    border-radius: 20px; margin-top: 6px;
+  }
+  .dt-tag.done { background: rgba(16,185,129,0.12); color: var(--success); }
+  .dt-tag.active { background: rgba(0,229,195,0.12); color: var(--accent); }
+  .dt-tag.upcoming { background: rgba(107,125,153,0.15); color: var(--text-muted); }
+
+  /* Docs sidebar */
+  .docs-list {}
+  .doc-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 9px;
+    background: var(--surface2); margin-bottom: 8px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .doc-item:hover { background: var(--surface); }
+  .doc-icon { font-size: 18px; }
+  .doc-info { flex: 1; min-width: 0; }
+  .doc-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-meta { font-size: 10px; color: var(--text-muted); }
+  .doc-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .doc-status.ok { background: var(--success); }
+  .doc-status.pending { background: var(--warn); }
+
+  /* ══════════════════════════════════
+     SCREEN 5 — NOTIFICATIONS
+  ══════════════════════════════════ */
+  #screen-notifications { padding: 28px; background: var(--bg); min-height: 100%; }
+
+  .notif-filter-row { display: flex; gap: 8px; margin-bottom: 24px; }
+  .filter-chip {
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-muted); font-size: 11px; cursor: pointer;
+    transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .filter-chip.active {
+    background: rgba(0,229,195,0.1);
+    border-color: var(--accent); color: var(--accent);
+  }
+
+  .notif-group-label { font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px; text-transform: uppercase; margin: 16px 0 8px; }
+
+  .notif-item {
+    display: flex; gap: 14px; padding: 14px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 8px;
+    cursor: pointer; transition: all 0.15s; position: relative;
+  }
+  .notif-item.unread { border-left: 3px solid var(--accent); }
+  .notif-item.unread.warn { border-left-color: var(--warn); }
+  .notif-item:hover { border-color: rgba(0,229,195,0.25); }
+  .notif-icon-wrap {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .ni-green { background: rgba(16,185,129,0.12); }
+  .ni-blue { background: rgba(0,112,243,0.12); }
+  .ni-yellow { background: rgba(245,158,11,0.12); }
+  .ni-red { background: rgba(239,68,68,0.12); }
+  .notif-content { flex: 1; }
+  .notif-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .notif-body { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .notif-time { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+  .notif-unread-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0; margin-top: 6px;
+  }
+  .notif-unread-dot.warn { background: var(--warn); }
+
+  /* ══════════════════════════════════
+     SCREEN 6 — ATTORNEY DASHBOARD
+  ══════════════════════════════════ */
+  #screen-attorney { padding: 28px; background: var(--bg); min-height: 100%; }
+
+  .atty-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+  .atty-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .as-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .as-value { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; }
+  .as-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  .case-table { width: 100%; border-collapse: collapse; }
+  .ct-head th {
+    text-align: left; font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .ct-row td {
+    padding: 12px 12px; border-bottom: 1px solid rgba(30,45,71,0.5);
+    font-size: 12.5px; vertical-align: middle;
+  }
+  .ct-row:hover td { background: rgba(255,255,255,0.02); }
+  .ct-row td:first-child { color: var(--accent); font-weight: 600; cursor: pointer; }
+  .urgency-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .urgency-high { background: var(--danger); }
+  .urgency-med { background: var(--warn); }
+  .urgency-low { background: var(--success); }
+
+  /* ══════════════════════════════════
+     SCREEN 7 — DOCUMENTS
+  ══════════════════════════════════ */
+  #screen-documents { padding: 28px; background: var(--bg); min-height: 100%; }
+
+  .doc-toolbar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+  }
+  .search-bar {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 14px;
+  }
+  .search-bar input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-size: 13px; flex: 1;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .search-bar .search-icon { color: var(--text-dim); }
+
+  .doc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .doc-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .doc-card:hover { border-color: rgba(0,229,195,0.3); transform: translateY(-2px); }
+  .dc-icon { font-size: 32px; margin-bottom: 12px; }
+  .dc-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .dc-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .dc-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    background: rgba(0,229,195,0.1); color: var(--accent);
+  }
+  .dc-tag.exp { background: rgba(245,158,11,0.1); color: var(--warn); }
+
+  /* ══════════════════════════════════
+     SCREEN 8 — SETTINGS / PROFILE
+  ══════════════════════════════════ */
+  #screen-settings { padding: 28px; background: var(--bg); min-height: 100%; }
+
+  .settings-grid { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+  .settings-nav {}
+  .sn-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; color: var(--text-muted); transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .sn-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .sn-item.active { color: var(--accent); background: rgba(0,229,195,0.06); }
+
+  .settings-panel { }
+  .sp-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; margin-bottom: 16px;
+  }
+  .sp-section-title {
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .sp-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid rgba(30,45,71,0.5);
+  }
+  .sp-row:last-child { border-bottom: none; }
+  .sp-label { font-size: 13px; }
+  .sp-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .toggle {
+    width: 40px; height: 22px; border-radius: 11px;
+    background: var(--surface2); position: relative; cursor: pointer;
+    transition: background 0.2s; border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute;
+    top: 2px; left: 2px; width: 16px; height: 16px;
+    border-radius: 50%; background: white;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* Avatar */
+  .avatar-wrap {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+  }
+  .avatar {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #070b14;
+  }
+  .avatar-info .name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+  .avatar-info .email { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+  /* ══════════════════════════════════
+     BOTTOM MOBILE NAV (for mobile feel)
+  ══════════════════════════════════ */
+  .mobile-hint {
+    position: fixed; bottom: 12px; right: 16px;
+    font-size: 10px; color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 20px;
+    pointer-events: none;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ─── Responsive tweak ─── */
+  @media (max-width: 900px) {
+    #storyboard-nav { width: 180px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .atty-stats { grid-template-columns: repeat(3, 1fr); }
+    .doc-grid { grid-template-columns: repeat(2, 1fr); }
+    .dashboard-grid, .detail-grid, .settings-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── STORYBOARD NAV ── -->
+  <nav id="storyboard-nav">
+    <div class="nav-logo">
+      <div class="brand">VisaTrack Pro</div>
+      <div class="sub">Interactive Prototype</div>
+    </div>
+
+    <div class="nav-section-label">User Flows</div>
+    <div class="nav-item active" onclick="showScreen('splash', this)">
+      <span class="dot"></span>Splash / Onboarding
+    </div>
+    <div class="nav-item" onclick="showScreen('signup', this)">
+      <span class="dot"></span>Sign Up / Login
+    </div>
+
+    <div class="nav-section-label">Individual User</div>
+    <div class="nav-item" onclick="showScreen('dashboard', this)">
+      <span class="dot"></span>My Dashboard
+    </div>
+    <div class="nav-item" onclick="showScreen('case-detail', this)">
+      <span class="dot"></span>Case Detail
+    </div>
+    <div class="nav-item" onclick="showScreen('notifications', this)">
+      <span class="dot"></span>Notifications
+    </div>
+    <div class="nav-item" onclick="showScreen('documents', this)">
+      <span class="dot"></span>Documents
+    </div>
+
+    <div class="nav-section-label">Professional User</div>
+    <div class="nav-item" onclick="showScreen('attorney', this)">
+      <span class="dot"></span>Attorney Dashboard
+    </div>
+
+    <div class="nav-section-label">Account</div>
+    <div class="nav-item" onclick="showScreen('settings', this)">
+      <span class="dot"></span>Profile & Settings
+    </div>
+  </nav>
+
+  <!-- ── VIEWPORT ── -->
+  <div id="viewport">
+    <div id="topbar">
+      <span class="tb-label">Screen</span>
+      <span class="tb-screen-name" id="current-screen-name">Splash / Onboarding</span>
+      <div class="nav-arrows">
+        <button class="nav-btn" onclick="navigatePrev()">&#8592;</button>
+        <button class="nav-btn" onclick="navigateNext()">&#8594;</button>
+      </div>
+      <span class="tb-badge">Prototype v1.0</span>
+    </div>
+
+    <div id="screen-container">
+
+      <!-- ══ SCREEN 1: SPLASH ══ -->
+      <div id="screen-splash" class="screen active">
+        <div class="splash-grid"></div>
+        <div class="splash-glow"></div>
+        <div class="splash-content">
+          <div class="splash-logo-mark">🛂</div>
+          <h1 class="splash-title">Know Your <span>Visa</span><br>Status. Always.</h1>
+          <p class="splash-sub">Real-time tracking, AI-powered insights, and intelligent alerts for every stage of your immigration journey.</p>
+          <div class="splash-btns">
+            <button class="btn-primary" onclick="showScreen('signup', document.querySelector('.nav-item:nth-child(5)'))">Get Started Free →</button>
+            <button class="btn-outline" onclick="showScreen('dashboard', document.querySelector('.nav-item:nth-child(7)'))">View Demo</button>
+          </div>
+          <div class="splash-features">
+            <span class="splash-feat"><span class="icon">✓</span> 20+ Countries</span>
+            <span class="splash-feat"><span class="icon">✓</span> AI Predictions</span>
+            <span class="splash-feat"><span class="icon">✓</span> Real-time Alerts</span>
+            <span class="splash-feat"><span class="icon">✓</span> Secure & Private</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SCREEN 2: SIGN UP ══ -->
+      <div id="screen-signup" class="screen">
+        <div class="auth-card">
+          <div class="auth-header">
+            <div class="auth-title">Create your account</div>
+            <div class="auth-sub">Join 50,000+ users tracking their visa journey</div>
+          </div>
+
+          <div class="user-type-tabs">
+            <button class="ut-tab active" onclick="selectTab(this)">Individual</button>
+            <button class="ut-tab" onclick="selectTab(this)">Attorney</button>
+            <button class="ut-tab" onclick="selectTab(this)">HR / Corp</button>
+            <button class="ut-tab" onclick="selectTab(this)">University</button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input class="form-input" type="text" placeholder="Alex" value="">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input class="form-input" type="text" placeholder="Johnson">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" placeholder="alex@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Country of Application</label>
+            <select class="form-input">
+              <option>🇺🇸 United States</option>
+              <option>🇨🇦 Canada</option>
+              <option>🇬🇧 United Kingdom</option>
+              <option>🇦🇺 Australia</option>
+            </select>
+          </div>
+
+          <button class="btn-primary" style="width:100%;margin-top:4px" onclick="showScreen('dashboard', document.querySelector('.nav-item:nth-child(7)'))">Create Account →</button>
+
+          <div class="auth-divider">or</div>
+
+          <button class="btn-outline" style="width:100%">Continue with Google</button>
+
+          <div class="auth-link">Already have an account? <span onclick="showScreen('dashboard', document.querySelector('.nav-item:nth-child(7)'))">Sign in</span></div>
+        </div>
+      </div>
+
+      <!-- ══ SCREEN 3: INDIVIDUAL DASHBOARD ══ -->
+      <div id="screen-dashboard" class="screen">
+        <div class="page-header">
+          <div>
+            <div class="page-greeting">👋 Welcome back, Alex</div>
+            <div class="page-date">Wednesday, March 4, 2026 &nbsp;·&nbsp; 2 active cases</div>
+          </div>
+          <div class="header-actions">
+            <div class="icon-btn notif-badge" onclick="showScreen('notifications', document.querySelector('.nav-item:nth-child(9)'))">🔔</div>
+            <div class="icon-btn" onclick="showScreen('settings', document.querySelector('.nav-item:nth-child(13)'))">👤</div>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Active Cases</div>
+            <div class="stat-value" style="color:var(--accent)">2</div>
+            <div class="stat-change">↑ 1 added this month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Days Since Filing</div>
+            <div class="stat-value">127</div>
+            <div class="stat-change warn">⚡ Avg. 180 days</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Documents</div>
+            <div class="stat-value">14</div>
+            <div class="stat-change">✓ All verified</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Next Deadline</div>
+            <div class="stat-value" style="color:var(--warn)">12d</div>
+            <div class="stat-change warn">⚠ Biometric apt.</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="grid-main">
+            <div class="section-title">Active Cases</div>
+
+            <div class="case-card" onclick="showScreen('case-detail', document.querySelector('.nav-item:nth-child(8)'))">
+              <div class="case-top">
+                <div>
+                  <div class="case-visa-type">H-1B Specialty Worker</div>
+                  <div class="case-number">Case #WAC2600234567 &nbsp;·&nbsp; USCIS</div>
+                </div>
+                <span class="status-pill active">In Progress</span>
+              </div>
+              <div class="case-progress">
+                <div class="progress-steps">
+                  <div class="step done"><div class="step-dot"></div><div class="step-label">Filed</div></div>
+                  <div class="step done"><div class="step-dot"></div><div class="step-label">Receipt</div></div>
+                  <div class="step current"><div class="step-dot"></div><div class="step-label">Biometrics</div></div>
+                  <div class="step"><div class="step-dot"></div><div class="step-label">Interview</div></div>
+                  <div class="step"><div class="step-dot"></div><div class="step-label">Decision</div></div>
+                </div>
+              </div>
+              <div class="case-meta">
+                <div class="case-meta-item"><strong>Filed</strong>Oct 15, 2025</div>
+                <div class="case-meta-item"><strong>Priority</strong>Regular</div>
+                <div class="case-meta-item"><strong>Est. Decision</strong>Apr 2026</div>
+                <div class="case-meta-item"><strong>Employer</strong>Acme Corp</div>
+              </div>
+            </div>
+
+            <div class="case-card pending" onclick="showScreen('case-detail', document.querySelector('.nav-item:nth-child(8)'))">
+              <div class="case-top">
+                <div>
+                  <div class="case-visa-type">F-1 Student Visa (OPT)</div>
+                  <div class="case-number">Case #SRC2600456789 &nbsp;·&nbsp; USCIS</div>
+                </div>
+                <span class="status-pill pending">Pending RFE</span>
+              </div>
+              <div class="case-progress">
+                <div class="progress-steps">
+                  <div class="step done"><div class="step-dot"></div><div class="step-label">Filed</div></div>
+                  <div class="step done"><div class="step-dot"></div><div class="step-label">Receipt</div></div>
+                  <div class="step done"><div class="step-dot"></div><div class="step-label">Biometrics</div></div>
+                  <div class="step current"><div class="step-dot"></div><div class="step-label">RFE</div></div>
+                  <div class="step"><div class="step-dot"></div><div class="step-label">Decision</div></div>
+                </div>
+              </div>
+              <div class="case-meta">
+                <div class="case-meta-item"><strong>Filed</strong>Jan 3, 2026</div>
+                <div class="case-meta-item"><strong>RFE Due</strong>Mar 16, 2026</div>
+                <div class="case-meta-item"><strong>Response</strong>12 days left</div>
+                <div class="case-meta-item"><strong>School</strong>UCLA</div>
+              </div>
+            </div>
+
+            <div class="section-title" style="margin-top:24px">Recent Activity</div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px 16px">
+              <div class="timeline-item">
+                <div class="timeline-icon tl-yellow">⚠️</div>
+                <div class="timeline-content">
+                  <div class="tl-title">Request for Evidence (RFE) Received</div>
+                  <div class="tl-time">Case #SRC2600456789 &nbsp;·&nbsp; 2 days ago</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-icon tl-green">✅</div>
+                <div class="timeline-content">
+                  <div class="tl-title">Biometrics appointment confirmed</div>
+                  <div class="tl-time">Case #WAC2600234567 &nbsp;·&nbsp; 5 days ago</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-icon tl-blue">📄</div>
+                <div class="timeline-content">
+                  <div class="tl-title">Receipt Notice (I-797) uploaded</div>
+                  <div class="tl-time">Case #WAC2600234567 &nbsp;·&nbsp; 8 days ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-side">
+            <div class="section-title">Quick Actions</div>
+            <div class="quick-actions">
+              <div class="qa-btn" onclick="showScreen('case-detail', document.querySelector('.nav-item:nth-child(8)'))">
+                <div class="qa-icon">🔍</div>
+                <div class="qa-label">Check Status</div>
+              </div>
+              <div class="qa-btn" onclick="showScreen('documents', document.querySelector('.nav-item:nth-child(10)'))">
+                <div class="qa-icon">📁</div>
+                <div class="qa-label">Documents</div>
+              </div>
+              <div class="qa-btn">
+                <div class="qa-icon">🤖</div>
+                <div class="qa-label">AI Assistant</div>
+              </div>
+              <div class="qa-btn">
+                <div class="qa-icon">📅</div>
+                <div class="qa-label">Schedule</div>
+              </div>
+            </div>
+
+            <div class="section-title">Upcoming</div>
+            <div class="upcoming-item">
+              <div class="upcoming-date">
+                <div class="upd-month">Mar</div>
+                <div class="upd-day">16</div>
+              </div>
+              <div class="upcoming-info">
+                <div class="ui-title">RFE Response Due</div>
+                <div class="ui-sub">Case #SRC2600456789</div>
+              </div>
+              <span style="font-size:14px;color:var(--warn)">⚡</span>
+            </div>
+            <div class="upcoming-item">
+              <div class="upcoming-date">
+                <div class="upd-month">Mar</div>
+                <div class="upd-day">22</div>
+              </div>
+              <div class="upcoming-info">
+                <div class="ui-title">Biometrics Appointment</div>
+                <div class="ui-sub">ASC Los Angeles, 9:00 AM</div>
+              </div>
+              <span style="font-size:14px;color:var(--accent)">📍</span>
+            </div>
+            <div class="upcoming-item">
+              <div class="upcoming-date">
+                <div class="upd-month">Apr</div>
+                <div class="upd-day">30</div>
+              </div>
+              <div class="upcoming-info">
+                <div class="ui-title">EAD Card Expiry</div>
+                <div class="ui-sub">Current OPT authorization</div>
+              </div>
+              <span style="font-size:14px;color:var(--text-dim)">🗓</span>
+            </div>
+
+            <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+              <div class="section-title" style="margin-bottom:10px">AI Processing Estimate</div>
+              <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px">Based on 12,000+ similar H-1B cases filed in Oct 2025, your approval likelihood is</div>
+              <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--accent);margin-bottom:4px">78%</div>
+              <div style="font-size:11px;color:var(--text-muted)">Expected decision: Mar 15 – May 30, 2026</div>
+              <div style="margin-top:12px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
+                <div style="height:100%;width:78%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SCREEN 4: CASE DETAIL ══ -->
+      <div id="screen-case-detail" class="screen">
+        <div class="back-btn" onclick="showScreen('dashboard', document.querySelector('.nav-item:nth-child(7)'))">
+          ← Back to Dashboard
+        </div>
+
+        <div class="case-hero">
+          <div class="case-hero-top">
+            <div>
+              <div class="case-hero-title">H-1B Specialty Worker</div>
+              <div class="case-hero-sub">Case #WAC2600234567 &nbsp;·&nbsp; USCIS &nbsp;·&nbsp; Filed October 15, 2025</div>
+            </div>
+            <span class="status-pill active" style="font-size:12px;padding:6px 16px">In Progress</span>
+          </div>
+          <div class="case-hero-meta">
+            <div class="chm-item">
+              <div class="chm-label">Petitioner</div>
+              <div class="chm-value">Acme Corp Inc.</div>
+            </div>
+            <div class="chm-item">
+              <div class="chm-label">Beneficiary</div>
+              <div class="chm-value">Alex Johnson</div>
+            </div>
+            <div class="chm-item">
+              <div class="chm-label">Processing</div>
+              <div class="chm-value">Regular (180d)</div>
+            </div>
+            <div class="chm-item">
+              <div class="chm-label">Est. Decision</div>
+              <div class="chm-value" style="color:var(--accent)">Apr 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <div>
+            <div class="section-title">Case Timeline</div>
+            <div class="detailed-timeline">
+              <div class="dt-item">
+                <div class="dt-line">
+                  <div class="dt-dot done"></div>
+                  <div class="dt-connector done"></div>
+                </div>
+                <div class="dt-body">
+                  <div class="dt-title">Petition Filed (Form I-129)</div>
+                  <div class="dt-date">October 15, 2025</div>
+                  <div class="dt-desc">Petition submitted to USCIS Vermont Service Center with all supporting documentation.</div>
+                  <span class="dt-tag done">Completed</span>
+                </div>
+              </div>
+              <div class="dt-item">
+                <div class="dt-line">
+                  <div class="dt-dot done"></div>
+                  <div class="dt-connector done"></div>
+                </div>
+                <div class="dt-body">
+                  <div class="dt-title">Receipt Notice Issued (I-797C)</div>
+                  <div class="dt-date">October 22, 2025</div>
+                  <div class="dt-desc">USCIS accepted the petition. Receipt number WAC2600234567 assigned. Case entered processing queue.</div>
+                  <span class="dt-tag done">Completed</span>
+                </div>
+              </div>
+              <div class="dt-item">
+                <div class="dt-line">
+                  <div class="dt-dot current"></div>
+                  <div class="dt-connector"></div>
+                </div>
+                <div class="dt-body">
+                  <div class="dt-title">Biometrics Appointment</div>
+                  <div class="dt-date">March 22, 2026 — 9:00 AM</div>
+                  <div class="dt-desc">Fingerprinting and photo at ASC Los Angeles (11000 Wilshire Blvd). Bring your appointment notice and ID.</div>
+                  <span class="dt-tag active">Upcoming</span>
+                </div>
+              </div>
+              <div class="dt-item">
+                <div class="dt-line">
+                  <div class="dt-dot upcoming"></div>
+                  <div class="dt-connector"></div>
+                </div>
+                <div class="dt-body">
+                  <div class="dt-title">Interview Scheduled</div>
+                  <div class="dt-date">Pending assignment</div>
+                  <div class="dt-desc">Interview date not yet assigned. Average wait time after biometrics: 45–60 days.</div>
+                  <span class="dt-tag upcoming">Pending</span>
+                </div>
+              </div>
+              <div class="dt-item">
+                <div class="dt-line">
+                  <div class="dt-dot upcoming"></div>
+                </div>
+                <div class="dt-body">
+                  <div class="dt-title">Final Decision</div>
+                  <div class="dt-date">Estimated: April–May 2026</div>
+                  <div class="dt-desc">USCIS will issue approval (I-797B), denial, or RFE. You will receive instant notification.</div>
+                  <span class="dt-tag upcoming">Pending</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">Case Documents</div>
+            <div class="docs-list">
+              <div class="doc-item">
+                <div class="doc-icon">📋</div>
+                <div class="doc-info">
+                  <div class="doc-name">Form I-129 Petition</div>
+                  <div class="doc-meta">Filed · 2.4 MB · PDF</div>
+                </div>
+                <div class="doc-status ok"></div>
+              </div>
+              <div class="doc-item">
+                <div class="doc-icon">📬</div>
+                <div class="doc-info">
+                  <div class="doc-name">Receipt Notice I-797C</div>
+                  <div class="doc-meta">Verified · 0.8 MB · PDF</div>
+                </div>
+                <div class="doc-status ok"></div>
+              </div>
+              <div class="doc-item">
+                <div class="doc-icon">🏢</div>
+                <div class="doc-info">
+                  <div class="doc-name">LCA Certification</div>
+                  <div class="doc-meta">Certified · 1.1 MB · PDF</div>
+                </div>
+                <div class="doc-status ok"></div>
+              </div>
+              <div class="doc-item">
+                <div class="doc-icon">📅</div>
+                <div class="doc-info">
+                  <div class="doc-name">Biometrics Notice</div>
+                  <div class="doc-meta">Mar 22, 2026 · PDF</div>
+                </div>
+                <div class="doc-status pending"></div>
+              </div>
+              <div class="doc-item" style="opacity:0.5">
+                <div class="doc-icon">✉️</div>
+                <div class="doc-info">
+                  <div class="doc-name">Approval Notice I-797B</div>
+                  <div class="doc-meta">Awaiting · Not yet issued</div>
+                </div>
+                <div class="doc-status" style="background:var(--text-dim)"></div>
+              </div>
+            </div>
+
+            <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+              <div class="section-title" style="margin-bottom:10px">AI Case Advisor</div>
+              <div style="background:var(--surface2);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:10px">
+                💡 <strong style="color:var(--text)">Heads up:</strong> Your case is on track. The biometrics step is the last major milestone before the final decision. Ensure your appointment notice and valid ID are ready.
+              </div>
+              <button class="btn-outline" style="width:100%;font-size:12px;padding:8px">Ask AI Assistant →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SCREEN 5: NOTIFICATIONS ══ -->
+      <div id="screen-notifications" class="screen">
+        <div class="page-header">
+          <div>
+            <div class="page-greeting">Notifications</div>
+            <div class="page-date">3 unread alerts</div>
+          </div>
+          <button class="btn-outline" style="font-size:12px;padding:8px 16px">Mark all read</button>
+        </div>
+
+        <div class="notif-filter-row">
+          <button class="filter-chip active">All</button>
+          <button class="filter-chip">Status Updates</button>
+          <button class="filter-chip">Deadlines</button>
+          <button class="filter-chip">Documents</button>
+          <button class="filter-chip">System</button>
+        </div>
+
+        <div class="notif-group-label">Today</div>
+
+        <div class="notif-item unread warn">
+          <div class="notif-icon-wrap ni-yellow">⚠️</div>
+          <div class="notif-content">
+            <div class="notif-title">RFE Response Due in 12 Days</div>
+            <div class="notif-body">Your Request for Evidence for Case #SRC2600456789 must be responded to by March 16, 2026. Failure to respond will result in denial.</div>
+            <div class="notif-time">2 hours ago</div>
+          </div>
+          <div class="notif-unread-dot warn"></div>
+        </div>
+
+        <div class="notif-item unread">
+          <div class="notif-icon-wrap ni-blue">📅</div>
+          <div class="notif-content">
+            <div class="notif-title">Biometrics Appointment Confirmed</div>
+            <div class="notif-body">Your biometrics appointment is scheduled for March 22, 2026 at 9:00 AM at ASC Los Angeles. Location added to your calendar.</div>
+            <div class="notif-time">5 hours ago</div>
+          </div>
+          <div class="notif-unread-dot"></div>
+        </div>
+
+        <div class="notif-group-label">Yesterday</div>
+
+        <div class="notif-item unread">
+          <div class="notif-icon-wrap ni-red">📬</div>
+          <div class="notif-content">
+            <div class="notif-title">Request for Evidence Received</div>
+            <div class="notif-body">USCIS has issued an RFE for Case #SRC2600456789 requesting additional employment authorization documentation.</div>
+            <div class="notif-time">Mar 3, 2026 — 4:12 PM</div>
+          </div>
+          <div class="notif-unread-dot"></div>
+        </div>
+
+        <div class="notif-item">
+          <div class="notif-icon-wrap ni-green">✅</div>
+          <div class="notif-content">
+            <div class="notif-title">Document Verified Successfully</div>
+            <div class="notif-body">Your LCA Certification for Case #WAC2600234567 has been verified and added to your document vault.</div>
+            <div class="notif-time">Mar 3, 2026 — 10:30 AM</div>
+          </div>
+        </div>
+
+        <div class="notif-group-label">Last Week</div>
+
+        <div class="notif-item">
+          <div class="notif-icon-wrap ni-green">🎉</div>
+          <div class="notif-content">
+            <div class="notif-title">Case Status Updated</div>
+            <div class="notif-body">Case #WAC2600234567 has moved to "Biometrics Scheduling" stage. This is a positive progression in your H-1B application.</div>
+            <div class="notif-time">Feb 28, 2026 — 2:15 PM</div>
+          </div>
+        </div>
+
+        <div class="notif-item">
+          <div class="notif-icon-wrap ni-blue">🤖</div>
+          <div class="notif-content">
+            <div class="notif-title">AI Insight: Processing Time Update</div>
+            <div class="notif-body">Based on recent USCIS data, H-1B processing times have improved by 8% this month. Your estimated decision window has moved to April 2026.</div>
+            <div class="notif-time">Feb 26, 2026 — 9:00 AM</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SCREEN 6: ATTORNEY DASHBOARD ══ -->
+      <div id="screen-attorney" class="screen">
+        <div class="page-header">
+          <div>
+            <div class="page-greeting">Attorney Dashboard</div>
+            <div class="page-date">Sarah Chen, Esq. &nbsp;·&nbsp; Chen Immigration Law &nbsp;·&nbsp; 48 active cases</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" style="font-size:12px;padding:9px 18px">+ Add Case</button>
+            <div class="icon-btn notif-badge" onclick="showScreen('notifications', document.querySelector('.nav-item:nth-child(9)'))">🔔</div>
+          </div>
+        </div>
+
+        <div class="atty-stats">
+          <div class="atty-stat">
+            <div class="as-label">Active Cases</div>
+            <div class="as-value" style="color:var(--accent)">48</div>
+            <div class="as-sub">↑ 6 this month</div>
+          </div>
+          <div class="atty-stat">
+            <div class="as-label">Pending RFE</div>
+            <div class="as-value" style="color:var(--warn)">7</div>
+            <div class="as-sub">⚡ Needs attention</div>
+          </div>
+          <div class="atty-stat">
+            <div class="as-label">Approved YTD</div>
+            <div class="as-value" style="color:var(--success)">31</div>
+            <div class="as-sub">✓ 96.9% success</div>
+          </div>
+          <div class="atty-stat">
+            <div class="as-label">Deadlines (7d)</div>
+            <div class="as-value" style="color:var(--danger)">4</div>
+            <div class="as-sub">⚠ Action required</div>
+          </div>
+          <div class="atty-stat">
+            <div class="as-label">Clients</div>
+            <div class="as-value">61</div>
+            <div class="as-sub">+ 8 pending onboard</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 260px;gap:20px">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div class="section-title" style="margin-bottom:0">Case List</div>
+              <div style="display:flex;gap:8px">
+                <select class="form-input" style="width:auto;font-size:11px;padding:5px 10px">
+                  <option>All Visa Types</option>
+                  <option>H-1B</option>
+                  <option>L-1</option>
+                  <option>O-1</option>
+                </select>
+                <select class="form-input" style="width:auto;font-size:11px;padding:5px 10px">
+                  <option>All Statuses</option>
+                  <option>In Progress</option>
+                  <option>RFE</option>
+                  <option>Approved</option>
+                </select>
+              </div>
+            </div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+              <table class="case-table">
+                <thead class="ct-head">
+                  <tr>
+                    <th>Case #</th>
+                    <th>Client</th>
+                    <th>Visa Type</th>
+                    <th>Status</th>
+                    <th>Deadline</th>
+                    <th>Priority</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="ct-row">
+                    <td onclick="showScreen('case-detail', document.querySelector('.nav-item:nth-child(8)'))">WAC-2600-234</td>
+                    <td>Alex Johnson</td>
+                    <td>H-1B</td>
+                    <td><span class="status-pill active">In Progress</span></td>
+                    <td>Mar 22</td>
+                    <td><span class="urgency-dot urgency-med"></span>Medium</td>
+                  </tr>
+                  <tr class="ct-row">
+                    <td>SRC-2600-456</td>
+                    <td>Maria Santos</td>
+                    <td>F-1 OPT</td>
+                    <td><span class="status-pill review">RFE Pending</span></td>
+                    <td>Mar 16 ⚡</td>
+                    <td><span class="urgency-dot urgency-high"></span>High</td>
+                  </tr>
+                  <tr class="ct-row">
+                    <td>IOE-2600-789</td>
+                    <td>David Kim</td>
+                    <td>O-1A</td>
+                    <td><span class="status-pill pending">Pending</span></td>
+                    <td>Apr 5</td>
+                    <td><span class="urgency-dot urgency-low"></span>Low</td>
+                  </tr>
+                  <tr class="ct-row">
+                    <td>YSC-2600-012</td>
+                    <td>Priya Nair</td>
+                    <td>L-1B</td>
+                    <td><span class="status-pill active">In Progress</span></td>
+                    <td>Apr 12</td>
+                    <td><span class="urgency-dot urgency-low"></span>Low</td>
+                  </tr>
+                  <tr class="ct-row">
+                    <td>LIN-2600-345</td>
+                    <td>James Wu</td>
+                    <td>EB-2 NIW</td>
+                    <td><span class="status-pill review">RFE Pending</span></td>
+                    <td>Mar 18 ⚡</td>
+                    <td><span class="urgency-dot urgency-high"></span>High</td>
+                  </tr>
+                  <tr class="ct-row">
+                    <td>MSC-2600-678</td>
+                    <td>Fatima Al-Sayed</td>
+                    <td>H-1B</td>
+                    <td><span class="status-pill approved">Approved</span></td>
+                    <td>—</td>
+                    <td><span class="urgency-dot urgency-low"></span>Low</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">Urgent Actions</div>
+            <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+              <div style="font-size:12px;font-weight:600;color:var(--danger);margin-bottom:8px">⚡ Deadlines This Week</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Mar 16 — RFE response for Santos (F-1)</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Mar 18 — RFE response for Wu (EB-2)</div>
+              <div style="font-size:12px;color:var(--text-muted)">Mar 22 — Biometrics Johnson (H-1B)</div>
+            </div>
+
+            <div class="section-title">Performance</div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+              <div style="margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+                  <span style="color:var(--text-muted)">Approval Rate YTD</span>
+                  <span style="font-weight:600;color:var(--success)">96.9%</span>
+                </div>
+                <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
+                  <div style="height:100%;width:97%;background:var(--success);border-radius:2px"></div>
+                </div>
+              </div>
+              <div style="margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+                  <span style="color:var(--text-muted)">Avg. Processing (H-1B)</span>
+                  <span style="font-weight:600">142 days</span>
+                </div>
+                <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
+                  <div style="height:100%;width:60%;background:var(--accent2);border-radius:2px"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+                  <span style="color:var(--text-muted)">Client Satisfaction</span>
+                  <span style="font-weight:600;color:var(--accent)">4.9 / 5.0</span>
+                </div>
+                <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
+                  <div style="height:100%;width:98%;background:var(--accent);border-radius:2px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SCREEN 7: DOCUMENTS ══ -->
+      <div id="screen-documents" class="screen">
+        <div class="page-header">
+          <div>
+            <div class="page-greeting">Document Vault</div>
+            <div class="page-date">14 documents &nbsp;·&nbsp; All verified &nbsp;·&nbsp; Blockchain secured</div>
+          </div>
+          <button class="btn-primary" style="font-size:12px;padding:9px 18px">+ Upload Document</button>
+        </div>
+
+        <div class="doc-toolbar">
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Search documents...">
+          </div>
+          <select class="form-input" style="width:auto;font-size:12px;padding:8px 12px">
+            <option>All Cases</option>
+            <option>H-1B WAC-234</option>
+            <option>F-1 OPT SRC-456</option>
+          </select>
+          <select class="form-input" style="width:auto;font-size:12px;padding:8px 12px">
+            <option>All Types</option>
+            <option>Petitions</option>
+            <option>Notices</option>
+            <option>Identification</option>
+          </select>
+        </div>
+
+        <div class="section-title">H-1B Case — WAC2600234567</div>
+        <div class="doc-grid" style="margin-bottom:24px">
+          <div class="doc-card">
+            <div class="dc-icon">📋</div>
+            <div class="dc-name">Form I-129</div>
+            <div class="dc-meta">Petition · PDF · 2.4 MB</div>
+            <span class="dc-tag">✓ Verified</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">📬</div>
+            <div class="dc-name">Receipt Notice I-797C</div>
+            <div class="dc-meta">Notice · PDF · 0.8 MB</div>
+            <span class="dc-tag">✓ Verified</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">🏢</div>
+            <div class="dc-name">LCA Certification</div>
+            <div class="dc-meta">DOL · PDF · 1.1 MB</div>
+            <span class="dc-tag">✓ Verified</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">📅</div>
+            <div class="dc-name">Biometrics Notice</div>
+            <div class="dc-meta">ASC · PDF · 0.5 MB</div>
+            <span class="dc-tag exp">⏳ Upcoming</span>
+          </div>
+        </div>
+
+        <div class="section-title">F-1 OPT Case — SRC2600456789</div>
+        <div class="doc-grid" style="margin-bottom:24px">
+          <div class="doc-card">
+            <div class="dc-icon">📋</div>
+            <div class="dc-name">Form I-765</div>
+            <div class="dc-meta">OPT Application · PDF · 1.8 MB</div>
+            <span class="dc-tag">✓ Verified</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">🎓</div>
+            <div class="dc-name">DSO Recommendation</div>
+            <div class="dc-meta">UCLA OIS · PDF · 0.3 MB</div>
+            <span class="dc-tag">✓ Verified</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">⚠️</div>
+            <div class="dc-name">RFE Notice</div>
+            <div class="dc-meta">USCIS · PDF · 0.6 MB</div>
+            <span class="dc-tag exp">⚡ Action needed</span>
+          </div>
+          <div class="doc-card" style="opacity:0.4;border-style:dashed">
+            <div class="dc-icon">📄</div>
+            <div class="dc-name">RFE Response</div>
+            <div class="dc-meta">Due Mar 16, 2026</div>
+            <span class="dc-tag exp">+ Upload</span>
+          </div>
+        </div>
+
+        <div class="section-title">Personal Documents</div>
+        <div class="doc-grid">
+          <div class="doc-card">
+            <div class="dc-icon">🛂</div>
+            <div class="dc-name">Passport (US)</div>
+            <div class="dc-meta">Expires Jan 2031 · JPG · 1.2 MB</div>
+            <span class="dc-tag">✓ Valid</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">🪪</div>
+            <div class="dc-name">EAD Card (OPT)</div>
+            <div class="dc-meta">Expires Apr 30, 2026 · JPG</div>
+            <span class="dc-tag exp">⏳ Expiring soon</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">🎓</div>
+            <div class="dc-name">Degree Certificate</div>
+            <div class="dc-meta">MS Computer Science · PDF</div>
+            <span class="dc-tag">✓ Verified</span>
+          </div>
+          <div class="doc-card">
+            <div class="dc-icon">📝</div>
+            <div class="dc-name">Resume / CV</div>
+            <div class="dc-meta">Updated Feb 2026 · PDF</div>
+            <span class="dc-tag">✓ Uploaded</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SCREEN 8: SETTINGS ══ -->
+      <div id="screen-settings" class="screen">
+        <div class="page-header">
+          <div class="page-greeting">Profile & Settings</div>
+        </div>
+
+        <div class="settings-grid">
+          <div class="settings-nav">
+            <div class="sn-item active">👤 &nbsp;Profile</div>
+            <div class="sn-item">🔔 &nbsp;Notifications</div>
+            <div class="sn-item">🔒 &nbsp;Security</div>
+            <div class="sn-item">💳 &nbsp;Subscription</div>
+            <div class="sn-item">🌍 &nbsp;Jurisdictions</div>
+            <div class="sn-item">🔗 &nbsp;Integrations</div>
+            <div class="sn-item" style="color:var(--danger);margin-top:16px">🚪 &nbsp;Sign Out</div>
+          </div>
+
+          <div class="settings-panel">
+            <div class="sp-section">
+              <div class="sp-section-title">Personal Information</div>
+              <div class="avatar-wrap">
+                <div class="avatar">AJ</div>
+                <div class="avatar-info">
+                  <div class="name">Alex Johnson</div>
+                  <div class="email">alex.johnson@email.com</div>
+                </div>
+                <button class="btn-outline" style="font-size:11px;padding:6px 14px;margin-left:auto">Edit Photo</button>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">First Name</label>
+                  <input class="form-input" value="Alex" type="text">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Name</label>
+                  <input class="form-input" value="Johnson" type="text">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input class="form-input" value="alex.johnson@email.com" type="email">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Phone</label>
+                  <input class="form-input" value="+1 (310) 555-0192" type="tel">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nationality</label>
+                  <input class="form-input" value="Indian" type="text">
+                </div>
+              </div>
+              <button class="btn-primary" style="font-size:12px;padding:9px 20px;margin-top:4px">Save Changes</button>
+            </div>
+
+            <div class="sp-section">
+              <div class="sp-section-title">Notification Preferences</div>
+              <div class="sp-row">
+                <div>
+                  <div class="sp-label">Case Status Updates</div>
+                  <div class="sp-sub">Receive alerts when your visa status changes</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="sp-row">
+                <div>
+                  <div class="sp-label">Deadline Reminders</div>
+                  <div class="sp-sub">7, 3, and 1 day warnings for upcoming deadlines</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="sp-row">
+                <div>
+                  <div class="sp-label">AI Insights & Tips</div>
+                  <div class="sp-sub">Weekly AI-generated insights about your case</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="sp-row">
+                <div>
+                  <div class="sp-label">Marketing & Offers</div>
+                  <div class="sp-sub">Product updates and promotional emails</div>
+                </div>
+                <div class="toggle" onclick="this.classList.toggle('on')"></div>
+              </div>
+            </div>
+
+            <div class="sp-section">
+              <div class="sp-section-title">Subscription — Premium Plan</div>
+              <div class="sp-row">
+                <div>
+                  <div class="sp-label">Current Plan</div>
+                  <div class="sp-sub">Premium · $19.99/month</div>
+                </div>
+                <span class="status-pill active">Active</span>
+              </div>
+              <div class="sp-row">
+                <div>
+                  <div class="sp-label">Next Billing Date</div>
+                  <div class="sp-sub">April 4, 2026</div>
+                </div>
+                <button class="btn-outline" style="font-size:11px;padding:5px 12px">Manage</button>
+              </div>
+              <div class="sp-row">
+                <div>
+                  <div class="sp-label">Plan Features</div>
+                  <div class="sp-sub">Unlimited cases, AI insights, family sharing, 10GB storage</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /screen-container -->
+  </div><!-- /viewport -->
+</div><!-- /app -->
+
+<div class="mobile-hint">Click cards & buttons to navigate →</div>
+
+<script>
+  const screens = [
+    { id: 'splash', name: 'Splash / Onboarding' },
+    { id: 'signup', name: 'Sign Up / Login' },
+    { id: 'dashboard', name: 'My Dashboard' },
+    { id: 'case-detail', name: 'Case Detail' },
+    { id: 'notifications', name: 'Notifications' },
+    { id: 'documents', name: 'Documents' },
+    { id: 'attorney', name: 'Attorney Dashboard' },
+    { id: 'settings', name: 'Profile & Settings' },
+  ];
+
+  let currentIndex = 0;
+
+  function showScreen(id, navEl) {
+    // Hide all screens
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    // Show target
+    const target = document.getElementById('screen-' + id);
+    if (target) {
+      target.classList.add('active');
+      // Scroll to top
+      document.getElementById('screen-container').scrollTop = 0;
+    }
+
+    // Activate nav item
+    if (navEl) navEl.classList.add('active');
+
+    // Update topbar
+    const screenDef = screens.find(s => s.id === id);
+    if (screenDef) {
+      document.getElementById('current-screen-name').textContent = screenDef.name;
+      currentIndex = screens.indexOf(screenDef);
+    }
+  }
+
+  function navigateNext() {
+    const next = screens[(currentIndex + 1) % screens.length];
+    const navItems = document.querySelectorAll('.nav-item');
+    const idx = Array.from(navItems).findIndex(n => n.textContent.trim().includes(next.name.split('/')[0].trim()));
+    showScreen(next.id, navItems[idx] || null);
+    if (navItems[idx]) navItems[idx].classList.add('active');
+  }
+
+  function navigatePrev() {
+    const prev = screens[(currentIndex - 1 + screens.length) % screens.length];
+    const navItems = document.querySelectorAll('.nav-item');
+    const idx = Array.from(navItems).findIndex(n => n.textContent.trim().includes(prev.name.split('/')[0].trim()));
+    showScreen(prev.id, navItems[idx] || null);
+    if (navItems[idx]) navItems[idx].classList.add('active');
+  }
+
+  function selectTab(el) {
+    el.closest('.user-type-tabs').querySelectorAll('.ut-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+</script>
+</body>
+</html>
