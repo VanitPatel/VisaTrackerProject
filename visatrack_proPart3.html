@@ -1,0 +1,2437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisaTrack Pro — Persistent Data Layer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   VISATRACK PRO — PERSISTENT DATA LAYER SPECIFICATION
+   Storage: claude.ai window.storage API (key-value)
+   Covers: All 33 Use Cases, 4 User Roles, Full CRUD
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:         #07090f;
+  --bg2:        #0b0e18;
+  --surface:    #0f1520;
+  --surface2:   #141c2b;
+  --surface3:   #1a2338;
+  --border:     #1e2d45;
+  --border2:    #253650;
+  --teal:       #00e5b8;
+  --teal-d:     #00b890;
+  --teal-lo:    rgba(0,229,184,.07);
+  --teal-mid:   rgba(0,229,184,.15);
+  --amber:      #f5a623;
+  --amber-lo:   rgba(245,166,35,.08);
+  --sky:        #38bdf8;
+  --sky-lo:     rgba(56,189,248,.08);
+  --violet:     #a78bfa;
+  --violet-lo:  rgba(167,139,250,.08);
+  --rose:       #fb7185;
+  --rose-lo:    rgba(251,113,133,.08);
+  --emerald:    #34d399;
+  --emerald-lo: rgba(52,211,153,.08);
+  --gold:       #fbbf24;
+  --ice:        #dce8f5;
+  --ice2:       #7a99c0;
+  --ice3:       #35506e;
+  --mono:       'Space Mono', monospace;
+  --sans:       'DM Sans', sans-serif;
+  --r:          8px;
+  --r2:         13px;
+  --r3:         18px;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 13px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--ice); overflow: hidden; height: 100vh; display: flex; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: 240px; min-width: 240px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden; z-index: 10;
+}
+.sb-logo {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.sb-mark {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--teal), var(--sky));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+  box-shadow: 0 0 18px rgba(0,229,184,.28);
+}
+.sb-title { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: -.3px; }
+.sb-title em { color: var(--teal); font-style: normal; }
+.sb-subtitle { font-size: 9px; color: var(--ice3); letter-spacing: .5px; text-transform: uppercase; margin-top: 2px; }
+
+.sb-nav { flex: 1; overflow-y: auto; padding: 10px 8px; }
+.sb-section {
+  font-size: 8.5px; font-weight: 700; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--ice3);
+  padding: 12px 8px 5px;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; border-radius: var(--r);
+  cursor: pointer; font-size: 11.5px; color: var(--ice2);
+  transition: all .12s; white-space: nowrap; position: relative;
+}
+.sb-item:hover { background: var(--surface); color: var(--ice); }
+.sb-item.on { background: var(--teal-lo); color: var(--teal); border-left: 2px solid var(--teal); }
+.sb-item .ic { width: 15px; text-align: center; font-size: 13px; flex-shrink: 0; }
+.sb-dot { width: 6px; height: 6px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+.dot-ok { background: var(--emerald); box-shadow: 0 0 5px rgba(52,211,153,.5); }
+.dot-warn { background: var(--amber); }
+.dot-busy { background: var(--sky); animation: blink 1.2s ease infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+/* ── MAIN ── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── TOPBAR ── */
+#topbar {
+  height: 50px; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 12px; flex-shrink: 0;
+}
+.tb-crumb { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10.5px; color: var(--ice3); }
+.tb-crumb .sep { color: var(--border2); }
+.tb-crumb .cur { color: var(--teal); }
+.tb-gap { flex: 1; }
+.storage-badge {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--teal-lo); border: 1px solid var(--teal-mid);
+  border-radius: var(--r); padding: 5px 11px; font-size: 10.5px;
+}
+.storage-badge .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); animation: blink 1.5s ease infinite; }
+.tb-btn {
+  height: 30px; border-radius: var(--r);
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--ice2); font-size: 11.5px; cursor: pointer;
+  padding: 0 12px; transition: all .13s; font-family: var(--sans);
+  display: flex; align-items: center; gap: 5px;
+}
+.tb-btn:hover { border-color: var(--teal); color: var(--teal); }
+.tb-btn.primary { background: var(--teal); color: var(--bg); border-color: var(--teal); font-weight: 600; }
+.tb-btn.primary:hover { background: var(--teal-d); }
+
+/* ── CONTENT ── */
+#content { flex: 1; overflow-y: auto; padding: 22px; }
+.scr { display: none; animation: fadeIn .18s ease; }
+.scr.on { display: block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)} }
+
+/* ── SHARED ── */
+.page-hd { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.page-title { font-family: var(--mono); font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+.page-title span { color: var(--teal); }
+.page-sub { font-size: 11.5px; color: var(--ice2); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 16px;
+}
+.card-hd {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--ice3); margin-bottom: 12px;
+}
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.g3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 14px 16px;
+}
+.stat-lbl { font-size: 9px; color: var(--ice3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+.stat-val { font-family: var(--mono); font-size: 24px; font-weight: 700; line-height: 1; }
+.stat-sub { font-size: 10.5px; margin-top: 5px; }
+.s-up{color:var(--emerald)}.s-warn{color:var(--amber)}.s-dn{color:var(--rose)}.s-muted{color:var(--ice3)}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 10px; font-weight: 600; font-family: var(--mono);
+}
+.b-teal    { background:var(--teal-lo);color:var(--teal) }
+.b-amber   { background:var(--amber-lo);color:var(--amber) }
+.b-sky     { background:var(--sky-lo);color:var(--sky) }
+.b-emerald { background:var(--emerald-lo);color:var(--emerald) }
+.b-rose    { background:var(--rose-lo);color:var(--rose) }
+.b-violet  { background:var(--violet-lo);color:var(--violet) }
+.b-muted   { background:var(--surface3);color:var(--ice3) }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--r);
+  font-family: var(--sans); font-size: 11.5px; font-weight: 500;
+  cursor: pointer; transition: all .14s; border: none;
+}
+.btn-primary { background: var(--teal); color: var(--bg); }
+.btn-primary:hover { background: var(--teal-d); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface2); color: var(--ice); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--border2); background: var(--surface3); }
+.btn-danger { background: var(--rose-lo); color: var(--rose); border: 1px solid transparent; }
+.btn-danger:hover { border-color: var(--rose); }
+.btn-sm { padding: 5px 10px; font-size: 10.5px; }
+.btn-xs { padding: 3px 8px; font-size: 10px; }
+
+.code {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 15px;
+  font-family: var(--mono); font-size: 10.5px; line-height: 1.75;
+  overflow-x: auto; color: var(--ice2);
+}
+.k { color: var(--violet) }
+.s { color: var(--teal) }
+.n { color: var(--amber) }
+.c { color: var(--ice3) }
+.m { color: var(--sky) }
+.ok { color: var(--emerald) }
+.err { color: var(--rose) }
+.w { color: var(--amber) }
+
+.log-stream {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 10px 12px;
+  font-family: var(--mono); font-size: 10px; line-height: 1.85;
+  height: 220px; overflow-y: auto;
+}
+.log-line { display: flex; gap: 8px; }
+.log-ts { color: var(--ice3); flex-shrink: 0; min-width: 76px; }
+.log-op { min-width: 55px; flex-shrink: 0; font-weight: 700; }
+.log-ok   { color: var(--emerald) }
+.log-warn { color: var(--amber) }
+.log-err  { color: var(--rose) }
+.log-info { color: var(--sky) }
+.log-msg { color: var(--ice2); flex: 1; }
+.log-msg em { color: var(--teal); font-style: normal; }
+
+.tbl { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.tbl th { padding: 8px 12px; text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--ice3); border-bottom: 1px solid var(--border); font-family: var(--mono); }
+.tbl td { padding: 9px 12px; border-bottom: 1px solid rgba(30,45,69,.5); color: var(--ice2); }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: rgba(0,229,184,.03); color: var(--ice); }
+.tbl td.mono { font-family: var(--mono); font-size: 10px; }
+.tbl td.link { color: var(--teal); cursor: pointer; font-weight: 600; font-family: var(--mono); font-size: 10px; }
+.tbl td.link:hover { text-decoration: underline; }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 10px; color: var(--ice2); margin-bottom: 4px; letter-spacing: .3px; font-family: var(--mono); }
+.field input, .field select, .field textarea {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 11px; color: var(--ice);
+  font-family: var(--sans); font-size: 12px; outline: none;
+  transition: border-color .13s; appearance: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--teal); }
+.field input::placeholder, .field textarea::placeholder { color: var(--ice3); }
+
+.prog { height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
+
+.toast-wrap { position: fixed; bottom: 20px; right: 20px; z-index: 500; display: flex; flex-direction: column; gap: 7px; }
+.toast {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 15px; border-radius: var(--r2);
+  font-size: 11.5px; background: var(--surface2);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  animation: toastIn .2s ease;
+}
+@keyframes toastIn { from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)} }
+.toast.ok    { border-color: var(--emerald); background: rgba(52,211,153,.06); }
+.toast.warn  { border-color: var(--amber);   background: rgba(245,166,35,.06); }
+.toast.err   { border-color: var(--rose);    background: rgba(251,113,133,.06); }
+.toast.info  { border-color: var(--sky);     background: rgba(56,189,248,.06); }
+
+.modal-veil { position: fixed; inset: 0; background: rgba(7,9,15,.82); z-index: 300; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal-veil.on { display: flex; }
+.modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r3); padding: 24px; width: 540px; max-width: 96vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+.modal-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-title { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.modal-x { background: none; border: none; color: var(--ice3); font-size: 16px; cursor: pointer; padding: 4px; border-radius: 5px; transition: color .12s; }
+.modal-x:hover { color: var(--rose); }
+
+.schema-key { color: var(--teal); }
+.schema-type { color: var(--violet); }
+.schema-desc { color: var(--ice3); font-size: 9.5px; }
+
+/* ── KEY-VALUE EXPLORER ── */
+.kv-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--r);
+  margin-bottom: 6px; cursor: pointer; transition: border-color .13s;
+}
+.kv-row:hover { border-color: var(--teal); }
+.kv-key { font-family: var(--mono); font-size: 10px; color: var(--teal); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kv-type { font-size: 9.5px; color: var(--ice3); flex-shrink: 0; }
+.kv-size { font-family: var(--mono); font-size: 9.5px; color: var(--ice3); flex-shrink: 0; min-width: 50px; text-align: right; }
+.kv-age { font-size: 9.5px; color: var(--ice3); flex-shrink: 0; min-width: 65px; text-align: right; }
+.kv-actions { display: flex; gap: 5px; flex-shrink: 0; }
+
+/* ── SPEC TABLE ── */
+.spec-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
+.spec-table thead th { background: var(--surface2); padding: 8px 12px; text-align: left; font-family: var(--mono); font-size: 8.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--ice3); border-bottom: 1px solid var(--border); }
+.spec-table tbody td { padding: 9px 12px; border-bottom: 1px solid rgba(30,45,69,.4); vertical-align: top; }
+.spec-table tbody tr:hover td { background: rgba(0,229,184,.025); }
+.spec-table .key-col { font-family: var(--mono); font-size: 10px; color: var(--teal); }
+.spec-table .type-col { font-family: var(--mono); font-size: 10px; color: var(--violet); }
+.spec-table .ttl-col { font-family: var(--mono); font-size: 10px; color: var(--amber); }
+.spec-table .desc-col { color: var(--ice2); font-size: 11px; line-height: 1.4; }
+.spec-table .owner-col { font-size: 10px; color: var(--sky); }
+
+/* ── FLOW ── */
+.flow-row { display: flex; align-items: center; gap: 0; margin-bottom: 8px; }
+.flow-node {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 12px;
+  font-size: 10.5px; text-align: center; flex: 1;
+  transition: border-color .13s;
+}
+.flow-node.active { border-color: var(--teal); background: var(--teal-lo); }
+.flow-node .fn-lbl { font-weight: 500; margin-bottom: 2px; }
+.flow-node .fn-sub { color: var(--ice3); font-family: var(--mono); font-size: 9px; }
+.flow-arrow { color: var(--ice3); font-size: 13px; padding: 0 6px; flex-shrink: 0; text-align: center; }
+.flow-arrow .fa-lbl { font-size: 8px; color: var(--ice3); white-space: nowrap; display: block; margin-top: 1px; }
+
+/* ── ENTITY ── */
+.entity-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r2); overflow: hidden;
+  transition: border-color .14s;
+}
+.entity-card:hover { border-color: var(--teal-mid); }
+.entity-hd {
+  padding: 11px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2);
+}
+.entity-icon { font-size: 16px; }
+.entity-name { font-family: var(--mono); font-size: 11.5px; font-weight: 700; }
+.entity-store { font-size: 9.5px; color: var(--ice3); margin-left: auto; font-family: var(--mono); }
+.entity-fields { padding: 10px 0; }
+.ef-row {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 4px 14px;
+}
+.ef-row:hover { background: var(--teal-lo); }
+.ef-name { font-family: var(--mono); font-size: 10px; color: var(--teal); min-width: 130px; flex-shrink: 0; }
+.ef-type { font-family: var(--mono); font-size: 9.5px; color: var(--violet); min-width: 80px; flex-shrink: 0; }
+.ef-desc { font-size: 10.5px; color: var(--ice3); flex: 1; }
+.ef-pk { background: var(--amber-lo); color: var(--amber); font-family: var(--mono); font-size: 8px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.ef-fk { background: var(--sky-lo); color: var(--sky); font-family: var(--mono); font-size: 8px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.ef-idx { background: var(--emerald-lo); color: var(--emerald); font-family: var(--mono); font-size: 8px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+
+/* ── RATELIMIT ── */
+.rl-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.rl-lbl { font-size: 11px; color: var(--ice2); min-width: 150px; }
+.rl-bar { flex: 1; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+.rl-fill { height: 100%; border-radius: 3px; }
+.rl-val { font-family: var(--mono); font-size: 10px; color: var(--ice3); min-width: 90px; text-align: right; }
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toasts"></div>
+<div class="modal-veil" id="modalVeil">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-mark">🗄</div>
+    <div>
+      <div class="sb-title">Visa<em>Track</em></div>
+      <div class="sb-subtitle">Data Layer Spec</div>
+    </div>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-section">Overview</div>
+    <div class="sb-item on" id="ni-overview" onclick="go('overview')">
+      <span class="ic">🏠</span>Storage Overview
+    </div>
+    <div class="sb-item" id="ni-spec" onclick="go('spec')">
+      <span class="ic">📋</span>Key-Value Schema Spec
+    </div>
+
+    <div class="sb-section">Data Entities</div>
+    <div class="sb-item" id="ni-users" onclick="go('users')">
+      <span class="ic">👤</span>Users & Auth
+      <div class="sb-dot dot-ok"></div>
+    </div>
+    <div class="sb-item" id="ni-cases" onclick="go('cases')">
+      <span class="ic">📋</span>Cases & Timelines
+      <div class="sb-dot dot-busy"></div>
+    </div>
+    <div class="sb-item" id="ni-documents" onclick="go('documents')">
+      <span class="ic">📁</span>Documents & OCR
+      <div class="sb-dot dot-ok"></div>
+    </div>
+    <div class="sb-item" id="ni-notifications" onclick="go('notifications')">
+      <span class="ic">🔔</span>Notifications
+      <div class="sb-dot dot-ok"></div>
+    </div>
+    <div class="sb-item" id="ni-billing" onclick="go('billing')">
+      <span class="ic">💳</span>Billing & Subscriptions
+      <div class="sb-dot dot-ok"></div>
+    </div>
+    <div class="sb-item" id="ni-ai" onclick="go('ai')">
+      <span class="ic">🤖</span>AI & Predictions
+      <div class="sb-dot dot-ok"></div>
+    </div>
+    <div class="sb-item" id="ni-blockchain" onclick="go('blockchain')">
+      <span class="ic">⛓</span>Blockchain Records
+      <div class="sb-dot dot-ok"></div>
+    </div>
+    <div class="sb-item" id="ni-audit" onclick="go('audit')">
+      <span class="ic">🔍</span>Audit & Compliance
+      <div class="sb-dot dot-ok"></div>
+    </div>
+
+    <div class="sb-section">Live Operations</div>
+    <div class="sb-item" id="ni-explorer" onclick="go('explorer')">
+      <span class="ic">🔎</span>KV Store Explorer
+      <div class="sb-dot dot-busy"></div>
+    </div>
+    <div class="sb-item" id="ni-operations" onclick="go('operations')">
+      <span class="ic">⚡</span>CRUD Operations Lab
+    </div>
+    <div class="sb-item" id="ni-migration" onclick="go('migration')">
+      <span class="ic">🔄</span>Migration & TTL
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-crumb">
+      <span>VisaTrack Pro</span>
+      <span class="sep">›</span>
+      <span>Data Layer</span>
+      <span class="sep">›</span>
+      <span class="cur" id="tbCur">Storage Overview</span>
+    </div>
+    <div class="tb-gap"></div>
+    <div class="storage-badge">
+      <div class="pulse"></div>
+      <span style="color:var(--teal);font-family:var(--mono);font-size:10px">window.storage</span>
+      <span style="color:var(--ice2)">Connected</span>
+      <span id="storageKeyCount" style="color:var(--amber);font-family:var(--mono)">—</span>
+      <span style="color:var(--ice3)">keys</span>
+    </div>
+    <button class="tb-btn" onclick="flushAll()">🗑 Flush</button>
+    <button class="tb-btn" onclick="seedAll()">⚡ Seed Data</button>
+    <button class="tb-btn primary" onclick="go('operations')">+ CRUD Lab</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ══════════════════════════════════
+         OVERVIEW
+    ══════════════════════════════════ -->
+    <div class="scr on" id="scr-overview">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">Persistent Data <span>Storage</span> Specification</div>
+          <div class="page-sub">window.storage key-value API · All 33 Use Cases · 4 User Roles · Full CRUD lifecycle</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="seedAll()">⚡ Seed Sample Data</button>
+          <button class="btn btn-primary btn-sm" onclick="go('spec')">View Full Schema →</button>
+        </div>
+      </div>
+
+      <!-- Live stats -->
+      <div class="g4" style="margin-bottom:18px">
+        <div class="stat">
+          <div class="stat-lbl">Total Storage Keys</div>
+          <div class="stat-val" style="color:var(--teal)" id="statKeys">—</div>
+          <div class="stat-sub s-muted">across all namespaces</div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">Namespaces</div>
+          <div class="stat-val" style="color:var(--sky)">11</div>
+          <div class="stat-sub s-muted">entity domains</div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">Use Cases Covered</div>
+          <div class="stat-val" style="color:var(--emerald)">33</div>
+          <div class="stat-sub s-up">UC-01 → UC-33 ✓</div>
+        </div>
+        <div class="stat">
+          <div class="stat-lbl">Storage Health</div>
+          <div class="stat-val" style="color:var(--emerald)" id="statHealth">—</div>
+          <div class="stat-sub s-up" id="statHealthSub">Checking…</div>
+        </div>
+      </div>
+
+      <!-- Architecture map -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd">Data Flow: Part 1 (Presentation) ↔ window.storage ↔ Part 2 (Architecture Layer)</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="flow-row">
+            <div class="flow-node"><div class="fn-lbl">👤 User Action</div><div class="fn-sub">Part 1 UI click/form</div></div>
+            <div class="flow-arrow">→<div class="fa-lbl">event</div></div>
+            <div class="flow-node active"><div class="fn-lbl">🗄 DataLayer.write()</div><div class="fn-sub">validate → serialize → store</div></div>
+            <div class="flow-arrow">→<div class="fa-lbl">key-value</div></div>
+            <div class="flow-node"><div class="fn-lbl">💾 window.storage</div><div class="fn-sub">persistent KV store</div></div>
+            <div class="flow-arrow">→<div class="fa-lbl">Kafka event</div></div>
+            <div class="flow-node"><div class="fn-lbl">⚙️ Backend Microservices</div><div class="fn-sub">Part 2 Architecture Layer</div></div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-node"><div class="fn-lbl">🖥 UI Re-render</div><div class="fn-sub">reactive state update</div></div>
+            <div class="flow-arrow">←<div class="fa-lbl">response</div></div>
+            <div class="flow-node active"><div class="fn-lbl">🗄 DataLayer.read()</div><div class="fn-sub">deserialize → validate → return</div></div>
+            <div class="flow-arrow">←<div class="fa-lbl">key lookup</div></div>
+            <div class="flow-node"><div class="fn-lbl">💾 window.storage</div><div class="fn-sub">get() → JSON.parse()</div></div>
+            <div class="flow-arrow">←<div class="fa-lbl">WS push</div></div>
+            <div class="flow-node"><div class="fn-lbl">🌐 Government API Poll</div><div class="fn-sub">USCIS / IRCC / UKVI</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="g2" style="margin-bottom:16px">
+        <!-- Namespace map -->
+        <div class="card">
+          <div class="card-hd">Storage Namespace Registry</div>
+          <table class="tbl">
+            <thead><tr><th>Namespace Prefix</th><th>Entity</th><th>TTL</th><th>Shared</th></tr></thead>
+            <tbody>
+              <tr><td class="mono link" onclick="go('users')">users:</td><td>Users, sessions, roles</td><td class="mono">session</td><td><span class="badge b-muted">private</span></td></tr>
+              <tr><td class="mono link" onclick="go('cases')">cases:</td><td>Visa cases + timelines</td><td class="mono">∞</td><td><span class="badge b-muted">private</span></td></tr>
+              <tr><td class="mono link" onclick="go('documents')">docs:</td><td>Document metadata + OCR</td><td class="mono">∞</td><td><span class="badge b-muted">private</span></td></tr>
+              <tr><td class="mono link" onclick="go('notifications')">notifs:</td><td>Notifications + prefs</td><td class="mono">30d</td><td><span class="badge b-muted">private</span></td></tr>
+              <tr><td class="mono link" onclick="go('billing')">billing:</td><td>Subscriptions + invoices</td><td class="mono">∞</td><td><span class="badge b-muted">private</span></td></tr>
+              <tr><td class="mono link" onclick="go('ai')">ai:</td><td>Predictions + chat history</td><td class="mono">7d</td><td><span class="badge b-muted">private</span></td></tr>
+              <tr><td class="mono link" onclick="go('blockchain')">chain:</td><td>Verification records + VCs</td><td class="mono">∞</td><td><span class="badge b-teal">shared</span></td></tr>
+              <tr><td class="mono link" onclick="go('audit')">audit:</td><td>Audit log events</td><td class="mono">7yr</td><td><span class="badge b-teal">shared</span></td></tr>
+              <tr><td class="mono">meta:</td><td>Platform config + tenants</td><td class="mono">∞</td><td><span class="badge b-teal">shared</span></td></tr>
+              <tr><td class="mono">kafka:</td><td>Event queue (async)</td><td class="mono">1h</td><td><span class="badge b-muted">private</span></td></tr>
+              <tr><td class="mono">cache:</td><td>API response cache</td><td class="mono">5min</td><td><span class="badge b-muted">private</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- API surface -->
+        <div class="card">
+          <div class="card-hd">DataLayer API Surface</div>
+          <div class="code" style="font-size:10px;line-height:1.8">
+<span class="c">// Core CRUD — all async, all validated</span>
+<span class="k">const</span> DL = <span class="m">DataLayer</span>;
+
+<span class="c">// ── CASES ──────────────────────────────</span>
+<span class="k">await</span> DL.<span class="m">cases</span>.<span class="m">create</span>(caseData);
+<span class="k">await</span> DL.<span class="m">cases</span>.<span class="m">get</span>(caseId);
+<span class="k">await</span> DL.<span class="m">cases</span>.<span class="m">list</span>(userId, filters);
+<span class="k">await</span> DL.<span class="m">cases</span>.<span class="m">update</span>(caseId, patch);
+<span class="k">await</span> DL.<span class="m">cases</span>.<span class="m">updateStatus</span>(caseId, status);
+<span class="k">await</span> DL.<span class="m">cases</span>.<span class="m">appendTimeline</span>(caseId, event);
+
+<span class="c">// ── DOCUMENTS ──────────────────────────</span>
+<span class="k">await</span> DL.<span class="m">docs</span>.<span class="m">create</span>(docMeta);
+<span class="k">await</span> DL.<span class="m">docs</span>.<span class="m">get</span>(docId);
+<span class="k">await</span> DL.<span class="m">docs</span>.<span class="m">listByCase</span>(caseId);
+<span class="k">await</span> DL.<span class="m">docs</span>.<span class="m">setVerified</span>(docId, hash);
+<span class="k">await</span> DL.<span class="m">docs</span>.<span class="m">storeOCR</span>(docId, fields);
+
+<span class="c">// ── NOTIFICATIONS ──────────────────────</span>
+<span class="k">await</span> DL.<span class="m">notifs</span>.<span class="m">push</span>(userId, notif);
+<span class="k">await</span> DL.<span class="m">notifs</span>.<span class="m">list</span>(userId, filter);
+<span class="k">await</span> DL.<span class="m">notifs</span>.<span class="m">markRead</span>(userId, notifIds);
+<span class="k">await</span> DL.<span class="m">notifs</span>.<span class="m">getPrefs</span>(userId);
+<span class="k">await</span> DL.<span class="m">notifs</span>.<span class="m">savePrefs</span>(userId, prefs);
+
+<span class="c">// ── AI ─────────────────────────────────</span>
+<span class="k">await</span> DL.<span class="m">ai</span>.<span class="m">storePrediction</span>(caseId, pred);
+<span class="k">await</span> DL.<span class="m">ai</span>.<span class="m">getPrediction</span>(caseId);
+<span class="k">await</span> DL.<span class="m">ai</span>.<span class="m">appendChat</span>(userId, msg);
+<span class="k">await</span> DL.<span class="m">ai</span>.<span class="m">getChat</span>(userId);
+
+<span class="c">// ── BLOCKCHAIN ─────────────────────────</span>
+<span class="k">await</span> DL.<span class="m">chain</span>.<span class="m">record</span>(docId, hash, meta);
+<span class="k">await</span> DL.<span class="m">chain</span>.<span class="m">verify</span>(docId, hash);
+<span class="k">await</span> DL.<span class="m">chain</span>.<span class="m">issueVC</span>(userId, vcData);
+          </div>
+        </div>
+      </div>
+
+      <!-- Live op log -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="card-hd" style="margin:0">Live Storage Operation Log</div>
+          <div style="display:flex;gap:7px">
+            <button class="btn btn-secondary btn-sm" onclick="clearLog('overviewLog')">Clear</button>
+          </div>
+        </div>
+        <div class="log-stream" id="overviewLog"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         SCHEMA SPEC
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-spec">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">Key-Value <span>Schema</span> Specification</div>
+          <div class="page-sub">Complete key pattern reference, data types, TTL policy, and owning services</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="exportSchema()">⬇ Export Schema JSON</button>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd">Storage Key Convention</div>
+        <div class="code" style="font-size:10.5px">
+<span class="c">// Pattern: {namespace}:{entity_type}:{id}[:{subkey}]</span>
+<span class="c">// All keys: lowercase, colon-delimited, no spaces/slashes/quotes</span>
+<span class="c">// Max key length: 200 chars  |  Max value size: 5MB</span>
+
+<span class="c">// EXAMPLES:</span>
+<span class="s">"users:profile:usr_alex_j_001"</span>             <span class="c">// User profile</span>
+<span class="s">"cases:case:WAC2600234567"</span>                 <span class="c">// Visa case</span>
+<span class="s">"cases:timeline:WAC2600234567"</span>             <span class="c">// Case timeline array</span>
+<span class="s">"docs:meta:doc_4521"</span>                       <span class="c">// Document metadata</span>
+<span class="s">"docs:ocr:doc_4521"</span>                        <span class="c">// OCR extracted fields</span>
+<span class="s">"notifs:list:usr_alex_j_001"</span>               <span class="c">// Notification list</span>
+<span class="s">"notifs:prefs:usr_alex_j_001"</span>              <span class="c">// Notification preferences</span>
+<span class="s">"billing:sub:sub_premium_001"</span>              <span class="c">// Subscription record</span>
+<span class="s">"ai:pred:WAC2600234567"</span>                    <span class="c">// AI prediction</span>
+<span class="s">"ai:chat:usr_alex_j_001"</span>                   <span class="c">// Chat history</span>
+<span class="s">"chain:record:doc_4521"</span>                    <span class="c">// Blockchain record (shared)</span>
+<span class="s">"chain:vc:usr_alex_j_001"</span>                  <span class="c">// Verifiable Credential (shared)</span>
+<span class="s">"audit:event:evt_20260302_001"</span>             <span class="c">// Audit log event (shared)</span>
+<span class="s">"cache:govt-api:USCIS:WAC2600234567"</span>       <span class="c">// API response cache</span>
+<span class="s">"kafka:queue:case-status-events"</span>           <span class="c">// Kafka-backed event queue</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd">Complete Key-Value Schema — All 11 Namespaces</div>
+        <div style="overflow-x:auto">
+          <table class="spec-table" id="specTable"></table>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="card-hd">TTL Policy by Namespace</div>
+          <table class="tbl">
+            <thead><tr><th>Namespace</th><th>TTL</th><th>Rationale</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">users:session:</td><td class="mono">24h</td><td>JWT token lifecycle</td></tr>
+              <tr><td class="mono">users:profile:</td><td class="mono">∞</td><td>Persistent identity</td></tr>
+              <tr><td class="mono">cases:case:</td><td class="mono">∞</td><td>Legal permanence</td></tr>
+              <tr><td class="mono">cache:govt-api:</td><td class="mono">15min</td><td>Match poll frequency</td></tr>
+              <tr><td class="mono">cache:ai:</td><td class="mono">1h</td><td>Model prediction freshness</td></tr>
+              <tr><td class="mono">notifs:list:</td><td class="mono">30d</td><td>Retention window</td></tr>
+              <tr><td class="mono">ai:chat:</td><td class="mono">7d</td><td>Session context</td></tr>
+              <tr><td class="mono">ai:pred:</td><td class="mono">24h</td><td>Monthly model retrain</td></tr>
+              <tr><td class="mono">kafka:queue:</td><td class="mono">1h</td><td>Transient event buffer</td></tr>
+              <tr><td class="mono">chain:record:</td><td class="mono">∞</td><td>Immutable audit trail</td></tr>
+              <tr><td class="mono">audit:event:</td><td class="mono">7yr</td><td>SOC 2 / GDPR compliance</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-hd">Data Classification × Storage Tier</div>
+          <table class="tbl">
+            <thead><tr><th>Classification</th><th>Namespaces</th><th>Shared</th><th>Encryption</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge b-rose">Restricted (PII)</span></td><td class="mono">users:, cases:, docs:</td><td>No</td><td>AES-256 + field-level</td></tr>
+              <tr><td><span class="badge b-amber">Confidential</span></td><td class="mono">billing:, notifs:, audit:</td><td>No / Shared</td><td>AES-256 at rest</td></tr>
+              <tr><td><span class="badge b-sky">Integrity (Hashes)</span></td><td class="mono">chain:</td><td>Yes</td><td>SHA-256 on-chain</td></tr>
+              <tr><td><span class="badge b-muted">Internal</span></td><td class="mono">cache:, kafka:, meta:</td><td>Mixed</td><td>TLS in transit</td></tr>
+              <tr><td><span class="badge b-violet">AI / ML</span></td><td class="mono">ai:</td><td>No</td><td>Encrypted at rest</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         USERS
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-users">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>users:</span> Identity & Session Storage</div>
+          <div class="page-sub">UC-01 Register · UC-08 Notification Prefs · UC-29 Account Management · IAM Service</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-secondary btn-sm" onclick="seedEntity('users')">⚡ Seed Users</button>
+          <button class="btn btn-primary btn-sm" onclick="openCreateUser()">+ New User</button>
+        </div>
+      </div>
+
+      <div class="g3" style="margin-bottom:16px">
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">👤</div><div class="entity-name">UserProfile</div><div class="entity-store">users:profile:{uid}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">usr_{slug}_{random}</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">email</span><span class="ef-type">string</span><span class="ef-desc">Unique, indexed</span><span class="ef-idx">IDX</span></div>
+            <div class="ef-row"><span class="ef-name">firstName</span><span class="ef-type">string</span><span class="ef-desc">Display name</span></div>
+            <div class="ef-row"><span class="ef-name">lastName</span><span class="ef-type">string</span><span class="ef-desc">Display name</span></div>
+            <div class="ef-row"><span class="ef-name">role</span><span class="ef-type">enum</span><span class="ef-desc">applicant|attorney|hr|dso|admin</span><span class="ef-idx">IDX</span></div>
+            <div class="ef-row"><span class="ef-name">tenantId</span><span class="ef-type">string</span><span class="ef-desc">Multi-tenant isolation</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">plan</span><span class="ef-type">enum</span><span class="ef-desc">free|basic|premium|firm|enterprise</span></div>
+            <div class="ef-row"><span class="ef-name">jurisdictions</span><span class="ef-type">string[]</span><span class="ef-desc">Active country codes</span></div>
+            <div class="ef-row"><span class="ef-name">mfaEnabled</span><span class="ef-type">boolean</span><span class="ef-desc">TOTP enrolled</span></div>
+            <div class="ef-row"><span class="ef-name">nationality</span><span class="ef-type">string</span><span class="ef-desc">ISO 3166-1 alpha-2</span></div>
+            <div class="ef-row"><span class="ef-name">createdAt</span><span class="ef-type">timestamp</span><span class="ef-desc">ISO 8601</span></div>
+            <div class="ef-row"><span class="ef-name">updatedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Auto-updated</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">🔑</div><div class="entity-name">UserSession</div><div class="entity-store">users:session:{uid}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Reference to profile</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">jwtToken</span><span class="ef-type">string</span><span class="ef-desc">RS256 signed JWT</span></div>
+            <div class="ef-row"><span class="ef-name">refreshToken</span><span class="ef-type">string</span><span class="ef-desc">Rotation on use</span></div>
+            <div class="ef-row"><span class="ef-name">deviceId</span><span class="ef-type">string</span><span class="ef-desc">Browser/device fingerprint</span></div>
+            <div class="ef-row"><span class="ef-name">mfaVerified</span><span class="ef-type">boolean</span><span class="ef-desc">Per-session MFA status</span></div>
+            <div class="ef-row"><span class="ef-name">issuedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Token issue time</span></div>
+            <div class="ef-row"><span class="ef-name">expiresAt</span><span class="ef-type">timestamp</span><span class="ef-desc">TTL: 24h</span></div>
+            <div class="ef-row"><span class="ef-name">ipAddress</span><span class="ef-type">string</span><span class="ef-desc">Masked for privacy</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">🏢</div><div class="entity-name">Tenant</div><div class="entity-store">meta:tenant:{tenantId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">ten_{slug}</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">name</span><span class="ef-type">string</span><span class="ef-desc">Organisation name</span></div>
+            <div class="ef-row"><span class="ef-name">type</span><span class="ef-type">enum</span><span class="ef-desc">b2c|law_firm|corporate|university</span></div>
+            <div class="ef-row"><span class="ef-name">plan</span><span class="ef-type">string</span><span class="ef-desc">Subscription tier</span></div>
+            <div class="ef-row"><span class="ef-name">apiKeyHash</span><span class="ef-type">string</span><span class="ef-desc">SHA-256 of API key</span></div>
+            <div class="ef-row"><span class="ef-name">rateLimitRpm</span><span class="ef-type">number</span><span class="ef-desc">Requests/hour cap</span></div>
+            <div class="ef-row"><span class="ef-name">dataRegion</span><span class="ef-type">enum</span><span class="ef-desc">us-east-1|eu-west-1|ap-southeast-1</span></div>
+            <div class="ef-row"><span class="ef-name">createdAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Onboarding date</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">Stored User Records</div>
+        <div style="overflow:hidden;border-radius:var(--r);border:1px solid var(--border)">
+          <table class="tbl" id="usersTable">
+            <thead><tr><th>Key</th><th>User ID</th><th>Role</th><th>Plan</th><th>MFA</th><th>Last Updated</th><th>Actions</th></tr></thead>
+            <tbody id="usersBody"><tr><td colspan="7" style="text-align:center;color:var(--ice3);padding:20px">No data — click "Seed Users" to populate</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         CASES
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-cases">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>cases:</span> Visa Case Storage</div>
+          <div class="page-sub">UC-02 Add Case · UC-03 View Status · UC-06 Timeline · UC-09 Family Link · Case Management Service</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-secondary btn-sm" onclick="seedEntity('cases')">⚡ Seed Cases</button>
+          <button class="btn btn-primary btn-sm" onclick="openCreateCase()">+ New Case</button>
+        </div>
+      </div>
+
+      <div class="g2" style="margin-bottom:16px">
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">📋</div><div class="entity-name">VisaCase</div><div class="entity-store">cases:case:{caseNumber}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">Receipt number (WAC…/SRC…)</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Owning applicant</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">tenantId</span><span class="ef-type">string</span><span class="ef-desc">Row-level isolation</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">jurisdiction</span><span class="ef-type">enum</span><span class="ef-desc">USCIS|IRCC|UKVI|DIBP|SCHENGEN</span><span class="ef-idx">IDX</span></div>
+            <div class="ef-row"><span class="ef-name">visaType</span><span class="ef-type">string</span><span class="ef-desc">H-1B, F-1, L-1A, EB-2, etc.</span><span class="ef-idx">IDX</span></div>
+            <div class="ef-row"><span class="ef-name">status</span><span class="ef-type">enum</span><span class="ef-desc">pending|in_progress|rfe|approved|denied</span><span class="ef-idx">IDX</span></div>
+            <div class="ef-row"><span class="ef-name">statusUpdatedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Last status change time</span></div>
+            <div class="ef-row"><span class="ef-name">filedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Filing date</span></div>
+            <div class="ef-row"><span class="ef-name">deadline</span><span class="ef-type">timestamp</span><span class="ef-desc">Next critical deadline</span></div>
+            <div class="ef-row"><span class="ef-name">processingType</span><span class="ef-type">enum</span><span class="ef-desc">regular|premium</span></div>
+            <div class="ef-row"><span class="ef-name">serviceCenter</span><span class="ef-type">string</span><span class="ef-desc">e.g. Vermont SC</span></div>
+            <div class="ef-row"><span class="ef-name">petitioner</span><span class="ef-type">string</span><span class="ef-desc">Employer / Institution</span></div>
+            <div class="ef-row"><span class="ef-name">familyGroupId</span><span class="ef-type">string</span><span class="ef-desc">Family case link (UC-09)</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">priority</span><span class="ef-type">enum</span><span class="ef-desc">low|normal|high|urgent</span></div>
+            <div class="ef-row"><span class="ef-name">rfeDeadline</span><span class="ef-type">timestamp</span><span class="ef-desc">RFE response deadline if active</span></div>
+            <div class="ef-row"><span class="ef-name">createdAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Record creation</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">📅</div><div class="entity-name">CaseTimeline</div><div class="entity-store">cases:timeline:{caseNumber}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">caseId</span><span class="ef-type">string</span><span class="ef-desc">Case reference</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">events[]</span><span class="ef-type">array</span><span class="ef-desc">Ordered timeline events</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ stage</span><span class="ef-type">string</span><span class="ef-desc">Filed|Receipt|Biometrics|Interview|Decision</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ status</span><span class="ef-type">enum</span><span class="ef-desc">pending|active|done</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ date</span><span class="ef-type">timestamp</span><span class="ef-desc">Event timestamp</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ note</span><span class="ef-type">string</span><span class="ef-desc">Human-readable detail</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ source</span><span class="ef-type">enum</span><span class="ef-desc">govt_api|scrape|manual|ai</span></div>
+            <div class="ef-row"><span class="ef-name">lastSyncedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Last govt API poll time</span></div>
+            <div class="ef-row"><span class="ef-name">nextPollAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Scheduled next poll</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">Stored Case Records</div>
+        <div style="overflow:hidden;border-radius:var(--r);border:1px solid var(--border)">
+          <table class="tbl" id="casesTable">
+            <thead><tr><th>Storage Key</th><th>Case #</th><th>Visa Type</th><th>Jurisdiction</th><th>Status</th><th>Deadline</th><th>Actions</th></tr></thead>
+            <tbody id="casesBody"><tr><td colspan="7" style="text-align:center;color:var(--ice3);padding:20px">No data — click "Seed Cases" to populate</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         DOCUMENTS
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-documents">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>docs:</span> Document & OCR Storage</div>
+          <div class="page-sub">UC-05 Upload · UC-10 Verify · Document Management Service · AWS Textract pipeline</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-secondary btn-sm" onclick="seedEntity('docs')">⚡ Seed Docs</button>
+          <button class="btn btn-primary btn-sm" onclick="openCreateDoc()">+ Upload Doc</button>
+        </div>
+      </div>
+
+      <div class="g2" style="margin-bottom:16px">
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">📄</div><div class="entity-name">DocumentMeta</div><div class="entity-store">docs:meta:{docId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">doc_{uuid}</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">caseId</span><span class="ef-type">string</span><span class="ef-desc">Attached case</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Uploader</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">name</span><span class="ef-type">string</span><span class="ef-desc">Original filename</span></div>
+            <div class="ef-row"><span class="ef-name">type</span><span class="ef-type">enum</span><span class="ef-desc">petition|notice|id|education|employment|other</span></div>
+            <div class="ef-row"><span class="ef-name">mimeType</span><span class="ef-type">string</span><span class="ef-desc">application/pdf | image/jpeg</span></div>
+            <div class="ef-row"><span class="ef-name">sizeBytes</span><span class="ef-type">number</span><span class="ef-desc">File size in bytes</span></div>
+            <div class="ef-row"><span class="ef-name">s3Key</span><span class="ef-type">string</span><span class="ef-desc">S3 object path (encrypted)</span></div>
+            <div class="ef-row"><span class="ef-name">ocrStatus</span><span class="ef-type">enum</span><span class="ef-desc">pending|processing|complete|failed</span></div>
+            <div class="ef-row"><span class="ef-name">blockchainStatus</span><span class="ef-type">enum</span><span class="ef-desc">pending|verified|failed</span></div>
+            <div class="ef-row"><span class="ef-name">blockchainHash</span><span class="ef-type">string</span><span class="ef-desc">SHA-256 on-chain hash</span></div>
+            <div class="ef-row"><span class="ef-name">verifiedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Blockchain confirmation time</span></div>
+            <div class="ef-row"><span class="ef-name">expiresAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Document validity date</span></div>
+            <div class="ef-row"><span class="ef-name">uploadedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Upload timestamp</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">🔍</div><div class="entity-name">OCRResult</div><div class="entity-store">docs:ocr:{docId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">docId</span><span class="ef-type">string</span><span class="ef-desc">Parent document</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">provider</span><span class="ef-type">enum</span><span class="ef-desc">aws_textract|google_vision</span></div>
+            <div class="ef-row"><span class="ef-name">confidence</span><span class="ef-type">number</span><span class="ef-desc">Overall confidence 0–1</span></div>
+            <div class="ef-row"><span class="ef-name">fields</span><span class="ef-type">object</span><span class="ef-desc">Extracted key-value pairs</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ documentType</span><span class="ef-type">string</span><span class="ef-desc">I-797C, I-129, etc.</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ receiptNumber</span><span class="ef-type">string</span><span class="ef-desc">Auto-fills case form</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ applicantName</span><span class="ef-type">string</span><span class="ef-desc">NER extracted</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ visaType</span><span class="ef-type">string</span><span class="ef-desc">Classification result</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ filingDate</span><span class="ef-type">string</span><span class="ef-desc">ISO date</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ petitioner</span><span class="ef-type">string</span><span class="ef-desc">Employer name</span></div>
+            <div class="ef-row"><span class="ef-name">rawText</span><span class="ef-type">string</span><span class="ef-desc">Full OCR text output</span></div>
+            <div class="ef-row"><span class="ef-name">processedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">OCR completion time</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">Stored Document Records</div>
+        <div style="overflow:hidden;border-radius:var(--r);border:1px solid var(--border)">
+          <table class="tbl" id="docsTable">
+            <thead><tr><th>Storage Key</th><th>Doc Name</th><th>Type</th><th>OCR</th><th>Blockchain</th><th>Size</th><th>Actions</th></tr></thead>
+            <tbody id="docsBody"><tr><td colspan="7" style="text-align:center;color:var(--ice3);padding:20px">No data — click "Seed Docs" to populate</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         NOTIFICATIONS
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-notifications">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>notifs:</span> Notification Storage</div>
+          <div class="page-sub">UC-04 Receive · UC-08 Preferences · Notification Service · FCM/APNs/SendGrid/Twilio</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="seedEntity('notifs')">⚡ Seed Notifications</button>
+      </div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">🔔</div><div class="entity-name">NotificationRecord</div><div class="entity-store">notifs:list:{userId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">ntf_{uuid}</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Target recipient</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">type</span><span class="ef-type">enum</span><span class="ef-desc">status|deadline|document|ai|billing</span></div>
+            <div class="ef-row"><span class="ef-name">priority</span><span class="ef-type">enum</span><span class="ef-desc">low|normal|high|urgent</span></div>
+            <div class="ef-row"><span class="ef-name">title</span><span class="ef-type">string</span><span class="ef-desc">Short notification title</span></div>
+            <div class="ef-row"><span class="ef-name">body</span><span class="ef-type">string</span><span class="ef-desc">Full notification text</span></div>
+            <div class="ef-row"><span class="ef-name">caseId</span><span class="ef-type">string</span><span class="ef-desc">Related case (optional)</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">read</span><span class="ef-type">boolean</span><span class="ef-desc">Read/unread state</span></div>
+            <div class="ef-row"><span class="ef-name">channels</span><span class="ef-type">string[]</span><span class="ef-desc">push|email|sms delivered to</span></div>
+            <div class="ef-row"><span class="ef-name">deliveredAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Delivery confirmation</span></div>
+            <div class="ef-row"><span class="ef-name">createdAt</span><span class="ef-type">timestamp</span><span class="ef-desc">TTL: 30 days</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">⚙️</div><div class="entity-name">NotificationPrefs</div><div class="entity-store">notifs:prefs:{userId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Owner</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">push</span><span class="ef-type">boolean</span><span class="ef-desc">Enable push (FCM/APNs)</span></div>
+            <div class="ef-row"><span class="ef-name">email</span><span class="ef-type">boolean</span><span class="ef-desc">Enable email (SendGrid)</span></div>
+            <div class="ef-row"><span class="ef-name">sms</span><span class="ef-type">boolean</span><span class="ef-desc">Enable SMS (Twilio)</span></div>
+            <div class="ef-row"><span class="ef-name">statusUpdates</span><span class="ef-type">boolean</span><span class="ef-desc">Case status changes</span></div>
+            <div class="ef-row"><span class="ef-name">deadlineReminders</span><span class="ef-type">boolean</span><span class="ef-desc">7d, 3d, 1d warnings</span></div>
+            <div class="ef-row"><span class="ef-name">aiInsights</span><span class="ef-type">boolean</span><span class="ef-desc">Weekly AI insights</span></div>
+            <div class="ef-row"><span class="ef-name">language</span><span class="ef-type">string</span><span class="ef-desc">DeepL target language</span></div>
+            <div class="ef-row"><span class="ef-name">quietHoursStart</span><span class="ef-type">string</span><span class="ef-desc">HH:MM local time</span></div>
+            <div class="ef-row"><span class="ef-name">quietHoursEnd</span><span class="ef-type">string</span><span class="ef-desc">HH:MM local time</span></div>
+            <div class="ef-row"><span class="ef-name">updatedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Last preference save</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">Stored Notification Records</div>
+        <div style="overflow:hidden;border-radius:var(--r);border:1px solid var(--border)">
+          <table class="tbl" id="notifsTable">
+            <thead><tr><th>Key</th><th>Type</th><th>Priority</th><th>Title</th><th>Status</th><th>Channels</th><th>Actions</th></tr></thead>
+            <tbody id="notifsBody"><tr><td colspan="7" style="text-align:center;color:var(--ice3);padding:20px">No data — click "Seed Notifications"</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         BILLING
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-billing">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>billing:</span> Subscription Storage</div>
+          <div class="page-sub">UC-01 Register · Billing Service · Stripe Billing API · Entitlement enforcement</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="seedEntity('billing')">⚡ Seed Billing</button>
+      </div>
+      <div class="g3" style="margin-bottom:16px">
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">💳</div><div class="entity-name">Subscription</div><div class="entity-store">billing:sub:{subId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">sub_{stripe_id}</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Subscriber</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">tenantId</span><span class="ef-type">string</span><span class="ef-desc">Tenant billing scope</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">plan</span><span class="ef-type">enum</span><span class="ef-desc">free|basic|premium|firm|enterprise</span></div>
+            <div class="ef-row"><span class="ef-name">status</span><span class="ef-type">enum</span><span class="ef-desc">active|trial|past_due|cancelled</span></div>
+            <div class="ef-row"><span class="ef-name">stripeSubId</span><span class="ef-type">string</span><span class="ef-desc">Stripe subscription ID</span></div>
+            <div class="ef-row"><span class="ef-name">stripeCustId</span><span class="ef-type">string</span><span class="ef-desc">Stripe customer ID</span></div>
+            <div class="ef-row"><span class="ef-name">currentPeriodEnd</span><span class="ef-type">timestamp</span><span class="ef-desc">Next billing date</span></div>
+            <div class="ef-row"><span class="ef-name">cancelAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Scheduled cancellation</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">✅</div><div class="entity-name">Entitlements</div><div class="entity-store">billing:entitle:{userId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">User</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">maxCases</span><span class="ef-type">number</span><span class="ef-desc">-1 = unlimited</span></div>
+            <div class="ef-row"><span class="ef-name">maxStorageMB</span><span class="ef-type">number</span><span class="ef-desc">Storage quota</span></div>
+            <div class="ef-row"><span class="ef-name">aiEnabled</span><span class="ef-type">boolean</span><span class="ef-desc">AI features gated</span></div>
+            <div class="ef-row"><span class="ef-name">apiEnabled</span><span class="ef-type">boolean</span><span class="ef-desc">REST API access</span></div>
+            <div class="ef-row"><span class="ef-name">familySharing</span><span class="ef-type">boolean</span><span class="ef-desc">UC-09 family cases</span></div>
+            <div class="ef-row"><span class="ef-name">blockchainVerify</span><span class="ef-type">boolean</span><span class="ef-desc">UC-10 verification</span></div>
+            <div class="ef-row"><span class="ef-name">rateLimit</span><span class="ef-type">number</span><span class="ef-desc">API req/hour</span></div>
+            <div class="ef-row"><span class="ef-name">updatedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">On Stripe webhook</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">🧾</div><div class="entity-name">Invoice</div><div class="entity-store">billing:invoice:{invoiceId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">inv_{stripe_id}</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">subscriptionId</span><span class="ef-type">string</span><span class="ef-desc">Parent subscription</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">amountCents</span><span class="ef-type">number</span><span class="ef-desc">Amount in cents (USD)</span></div>
+            <div class="ef-row"><span class="ef-name">status</span><span class="ef-type">enum</span><span class="ef-desc">draft|open|paid|void|uncollectible</span></div>
+            <div class="ef-row"><span class="ef-name">paidAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Payment confirmation</span></div>
+            <div class="ef-row"><span class="ef-name">pdfUrl</span><span class="ef-type">string</span><span class="ef-desc">Stripe hosted PDF</span></div>
+            <div class="ef-row"><span class="ef-name">issuedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Invoice date</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">Stored Billing Records</div>
+        <div style="overflow:hidden;border-radius:var(--r);border:1px solid var(--border)">
+          <table class="tbl">
+            <thead><tr><th>Key</th><th>User</th><th>Plan</th><th>Status</th><th>Max Cases</th><th>AI</th><th>Next Billing</th></tr></thead>
+            <tbody id="billingBody"><tr><td colspan="7" style="text-align:center;color:var(--ice3);padding:20px">No data — click "Seed Billing"</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         AI
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-ai">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>ai:</span> AI & Prediction Storage</div>
+          <div class="page-sub">UC-06 Timeline · UC-07 Chat · UC-17 Risk · UC-20 Forecast · AI/ML Service · GPT-4 RAG</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="seedEntity('ai')">⚡ Seed AI Data</button>
+      </div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">🎯</div><div class="entity-name">AIPrediction</div><div class="entity-store">ai:pred:{caseId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">caseId</span><span class="ef-type">string</span><span class="ef-desc">Target case</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">model</span><span class="ef-type">string</span><span class="ef-desc">H1B_XGB_v3 / F1_GBM_v2</span></div>
+            <div class="ef-row"><span class="ef-name">approvalProbability</span><span class="ef-type">number</span><span class="ef-desc">0.0–1.0</span></div>
+            <div class="ef-row"><span class="ef-name">confidence</span><span class="ef-type">number</span><span class="ef-desc">Model confidence 0.0–1.0</span></div>
+            <div class="ef-row"><span class="ef-name">riskScore</span><span class="ef-type">number</span><span class="ef-desc">0=low, 1=high risk</span></div>
+            <div class="ef-row"><span class="ef-name">riskFactors</span><span class="ef-type">string[]</span><span class="ef-desc">Identified risk factors</span></div>
+            <div class="ef-row"><span class="ef-name">timelineP25</span><span class="ef-type">number</span><span class="ef-desc">Optimistic days estimate</span></div>
+            <div class="ef-row"><span class="ef-name">timelineP50</span><span class="ef-type">number</span><span class="ef-desc">Median days estimate</span></div>
+            <div class="ef-row"><span class="ef-name">timelineP75</span><span class="ef-type">number</span><span class="ef-desc">Pessimistic days estimate</span></div>
+            <div class="ef-row"><span class="ef-name">estimatedDecision</span><span class="ef-type">timestamp</span><span class="ef-desc">Predicted decision date</span></div>
+            <div class="ef-row"><span class="ef-name">sampleSize</span><span class="ef-type">number</span><span class="ef-desc">Training cases used</span></div>
+            <div class="ef-row"><span class="ef-name">generatedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">TTL: 24h then re-score</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">💬</div><div class="entity-name">ChatHistory</div><div class="entity-store">ai:chat:{userId}</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Session owner</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">messages[]</span><span class="ef-type">array</span><span class="ef-desc">Ordered message history</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ role</span><span class="ef-type">enum</span><span class="ef-desc">user|assistant|system</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ content</span><span class="ef-type">string</span><span class="ef-desc">Message text (HTML allowed)</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ timestamp</span><span class="ef-type">timestamp</span><span class="ef-desc">Message time</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ tokens</span><span class="ef-type">number</span><span class="ef-desc">Token count for billing</span></div>
+            <div class="ef-row" style="padding-left:28px"><span class="ef-name">↳ model</span><span class="ef-type">string</span><span class="ef-desc">gpt-4-turbo|llama-3</span></div>
+            <div class="ef-row"><span class="ef-name">totalTokens</span><span class="ef-type">number</span><span class="ef-desc">Session token count</span></div>
+            <div class="ef-row"><span class="ef-name">language</span><span class="ef-type">string</span><span class="ef-desc">DeepL detected language</span></div>
+            <div class="ef-row"><span class="ef-name">sessionStarted</span><span class="ef-type">timestamp</span><span class="ef-desc">TTL: 7 days</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         BLOCKCHAIN
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-blockchain">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>chain:</span> Blockchain & VC Storage</div>
+          <div class="page-sub">UC-10 Verify · UC-33 Audit · Hyperledger Fabric · W3C Verifiable Credentials · Shared storage</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="seedEntity('chain')">⚡ Seed Chain Records</button>
+      </div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">⛓</div><div class="entity-name">ChainRecord</div><div class="entity-store">chain:record:{docId} (shared)</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">docId</span><span class="ef-type">string</span><span class="ef-desc">Document reference</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">sha256Hash</span><span class="ef-type">string</span><span class="ef-desc">0x… document hash</span></div>
+            <div class="ef-row"><span class="ef-name">blockNumber</span><span class="ef-type">number</span><span class="ef-desc">Fabric block number</span></div>
+            <div class="ef-row"><span class="ef-name">txId</span><span class="ef-type">string</span><span class="ef-desc">Fabric transaction ID</span></div>
+            <div class="ef-row"><span class="ef-name">event</span><span class="ef-type">enum</span><span class="ef-desc">DocumentVerified|VCIssued|VCRevoked</span></div>
+            <div class="ef-row"><span class="ef-name">networkId</span><span class="ef-type">string</span><span class="ef-desc">Hyperledger channel ID</span></div>
+            <div class="ef-row"><span class="ef-name">confirmedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">Raft consensus confirmation</span></div>
+            <div class="ef-row"><span class="ef-name">chaincodeVersion</span><span class="ef-type">string</span><span class="ef-desc">DocVerify v1.x</span></div>
+          </div>
+        </div>
+        <div class="entity-card">
+          <div class="entity-hd"><div class="entity-icon">🪪</div><div class="entity-name">VerifiableCredential</div><div class="entity-store">chain:vc:{userId} (shared)</div></div>
+          <div class="entity-fields">
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">vc_{uuid} W3C DID</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">subjectId</span><span class="ef-type">string</span><span class="ef-desc">DID of holder</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">issuer</span><span class="ef-type">string</span><span class="ef-desc">did:visatrack:issuer</span></div>
+            <div class="ef-row"><span class="ef-name">type</span><span class="ef-type">string[]</span><span class="ef-desc">VerifiableCredential, ImmigrationStatus</span></div>
+            <div class="ef-row"><span class="ef-name">claims</span><span class="ef-type">object</span><span class="ef-desc">Credential subject claims</span></div>
+            <div class="ef-row"><span class="ef-name">proof</span><span class="ef-type">object</span><span class="ef-desc">Ed25519 signature proof</span></div>
+            <div class="ef-row"><span class="ef-name">status</span><span class="ef-type">enum</span><span class="ef-desc">active|revoked|expired</span></div>
+            <div class="ef-row"><span class="ef-name">issuedAt</span><span class="ef-type">timestamp</span><span class="ef-desc">W3C issuanceDate</span></div>
+            <div class="ef-row"><span class="ef-name">expiresAt</span><span class="ef-type">timestamp</span><span class="ef-desc">W3C expirationDate</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">Shared Chain Records (all users)</div>
+        <div style="overflow:hidden;border-radius:var(--r);border:1px solid var(--border)">
+          <table class="tbl">
+            <thead><tr><th>Key (shared)</th><th>Event</th><th>Hash (truncated)</th><th>Block #</th><th>Status</th><th>Confirmed</th></tr></thead>
+            <tbody id="chainBody"><tr><td colspan="6" style="text-align:center;color:var(--ice3);padding:20px">No data — click "Seed Chain Records"</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         AUDIT
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-audit">
+      <div class="page-hd">
+        <div>
+          <div class="page-title"><span>audit:</span> Audit & Compliance Log</div>
+          <div class="page-sub">UC-33 Audit Logs · SOC 2 Type II · GDPR · 7-year retention · Shared storage · OpenSearch backed</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="seedEntity('audit')">⚡ Seed Audit Log</button>
+      </div>
+      <div class="entity-card" style="margin-bottom:16px">
+        <div class="entity-hd"><div class="entity-icon">📋</div><div class="entity-name">AuditEvent</div><div class="entity-store">audit:event:{eventId} (shared, 7yr TTL)</div></div>
+        <div class="entity-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div>
+            <div class="ef-row"><span class="ef-name">id</span><span class="ef-type">string</span><span class="ef-desc">evt_{date}_{uuid}</span><span class="ef-pk">PK</span></div>
+            <div class="ef-row"><span class="ef-name">type</span><span class="ef-type">enum</span><span class="ef-desc">LOGIN|LOGOUT|DATA_ACCESS|DATA_MODIFY|PERMISSION_CHANGE|API_CALL|PAYMENT|DOCUMENT_UPLOAD|BLOCKCHAIN_TX</span></div>
+            <div class="ef-row"><span class="ef-name">userId</span><span class="ef-type">string</span><span class="ef-desc">Actor</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">tenantId</span><span class="ef-type">string</span><span class="ef-desc">Tenant scope</span><span class="ef-fk">FK</span></div>
+            <div class="ef-row"><span class="ef-name">resource</span><span class="ef-type">string</span><span class="ef-desc">Affected resource path</span></div>
+          </div>
+          <div>
+            <div class="ef-row"><span class="ef-name">outcome</span><span class="ef-type">enum</span><span class="ef-desc">success|denied|error</span></div>
+            <div class="ef-row"><span class="ef-name">ipAddress</span><span class="ef-type">string</span><span class="ef-desc">Masked after 90d (GDPR)</span></div>
+            <div class="ef-row"><span class="ef-name">userAgent</span><span class="ef-type">string</span><span class="ef-desc">Browser/client string</span></div>
+            <div class="ef-row"><span class="ef-name">metadata</span><span class="ef-type">object</span><span class="ef-desc">Event-specific payload</span></div>
+            <div class="ef-row"><span class="ef-name">timestamp</span><span class="ef-type">timestamp</span><span class="ef-desc">Immutable event time</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">Shared Audit Events</div>
+        <div style="overflow:hidden;border-radius:var(--r);border:1px solid var(--border)">
+          <table class="tbl">
+            <thead><tr><th>Event ID</th><th>Type</th><th>User</th><th>Resource</th><th>Outcome</th><th>Timestamp</th></tr></thead>
+            <tbody id="auditBody"><tr><td colspan="6" style="text-align:center;color:var(--ice3);padding:20px">No data — click "Seed Audit Log"</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         KV EXPLORER
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-explorer">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">KV Store <span>Explorer</span></div>
+          <div class="page-sub">Browse, inspect, edit and delete all persisted keys in window.storage</div>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-secondary btn-sm" onclick="refreshExplorer()">🔄 Refresh</button>
+          <button class="btn btn-danger btn-sm" onclick="flushAll()">🗑 Flush All</button>
+        </div>
+      </div>
+
+      <div class="g4" style="margin-bottom:16px">
+        <div class="stat"><div class="stat-lbl">Total Keys</div><div class="stat-val" style="color:var(--teal)" id="explTotalKeys">—</div></div>
+        <div class="stat"><div class="stat-lbl">Private Keys</div><div class="stat-val" style="color:var(--sky)" id="explPrivateKeys">—</div></div>
+        <div class="stat"><div class="stat-lbl">Shared Keys</div><div class="stat-val" style="color:var(--violet)" id="explSharedKeys">—</div></div>
+        <div class="stat"><div class="stat-lbl">Est. Size</div><div class="stat-val" style="color:var(--amber)" id="explSize">—</div></div>
+      </div>
+
+      <div class="g2" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-hd">Filter Keys</div>
+          <div class="field">
+            <label>Namespace Prefix</label>
+            <select id="explorerFilter" onchange="refreshExplorer()">
+              <option value="">All namespaces</option>
+              <option value="users:">users:</option>
+              <option value="cases:">cases:</option>
+              <option value="docs:">docs:</option>
+              <option value="notifs:">notifs:</option>
+              <option value="billing:">billing:</option>
+              <option value="ai:">ai:</option>
+              <option value="chain:">chain:</option>
+              <option value="audit:">audit:</option>
+              <option value="cache:">cache:</option>
+              <option value="kafka:">kafka:</option>
+              <option value="meta:">meta:</option>
+            </select>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">Storage Composition</div>
+          <div id="explorerComposition"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">All Persisted Keys</div>
+        <div id="explorerList"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         CRUD LAB
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-operations">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">CRUD <span>Operations</span> Lab</div>
+          <div class="page-sub">Interactively test all DataLayer API methods against the live window.storage backend</div>
+        </div>
+      </div>
+
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-hd">Execute Storage Operation</div>
+          <div class="field">
+            <label>Operation</label>
+            <select id="opSelect" onchange="updateOpForm()">
+              <optgroup label="Cases">
+                <option value="cases.create">cases.create — UC-02 Add Case</option>
+                <option value="cases.get">cases.get — UC-03 View Status</option>
+                <option value="cases.list">cases.list — UC-11 Client Portfolio</option>
+                <option value="cases.updateStatus">cases.updateStatus — Status Change</option>
+                <option value="cases.appendTimeline">cases.appendTimeline — UC-06 Timeline</option>
+              </optgroup>
+              <optgroup label="Documents">
+                <option value="docs.create">docs.create — UC-05 Upload</option>
+                <option value="docs.get">docs.get — Get Document</option>
+                <option value="docs.setVerified">docs.setVerified — UC-10 Blockchain Verify</option>
+                <option value="docs.storeOCR">docs.storeOCR — Store OCR Result</option>
+              </optgroup>
+              <optgroup label="Notifications">
+                <option value="notifs.push">notifs.push — UC-04 Push Notification</option>
+                <option value="notifs.markRead">notifs.markRead — Mark as Read</option>
+                <option value="notifs.savePrefs">notifs.savePrefs — UC-08 Save Prefs</option>
+              </optgroup>
+              <optgroup label="AI">
+                <option value="ai.storePrediction">ai.storePrediction — UC-06 Store Prediction</option>
+                <option value="ai.appendChat">ai.appendChat — UC-07 Save Chat</option>
+                <option value="ai.getPrediction">ai.getPrediction — Get Prediction</option>
+              </optgroup>
+              <optgroup label="Blockchain">
+                <option value="chain.record">chain.record — UC-10 Record Hash</option>
+                <option value="chain.verify">chain.verify — Verify Document</option>
+                <option value="chain.issueVC">chain.issueVC — Issue Verifiable Credential</option>
+              </optgroup>
+              <optgroup label="Audit">
+                <option value="audit.log">audit.log — UC-33 Log Event</option>
+              </optgroup>
+              <optgroup label="Raw Storage">
+                <option value="raw.set">raw.set — window.storage.set()</option>
+                <option value="raw.get">raw.get — window.storage.get()</option>
+                <option value="raw.delete">raw.delete — window.storage.delete()</option>
+                <option value="raw.list">raw.list — window.storage.list()</option>
+              </optgroup>
+            </select>
+          </div>
+          <div id="opFormFields"></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="executeOp()">▶ Execute</button>
+        </div>
+        <div class="card">
+          <div class="card-hd">Result</div>
+          <div class="code" id="opResult" style="min-height:200px;overflow-y:auto;font-size:10px;line-height:1.7">
+<span class="c">// Result will appear here after execution</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd" style="margin-bottom:10px">CRUD Operation Log</div>
+        <div class="log-stream" id="crudLog"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         MIGRATION
+    ══════════════════════════════════ -->
+    <div class="scr" id="scr-migration">
+      <div class="page-hd">
+        <div>
+          <div class="page-title">Migration & <span>TTL</span> Policy</div>
+          <div class="page-sub">Schema versioning, TTL enforcement, GDPR erasure, data migration procedures</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="runTTLCleanup()">🧹 Run TTL Cleanup</button>
+      </div>
+
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-hd">Schema Version History</div>
+          <table class="tbl">
+            <thead><tr><th>Version</th><th>Date</th><th>Changes</th><th>Migration</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">v1.0.0</td><td>Mar 2026</td><td>Initial schema — all 11 namespaces</td><td><span class="badge b-emerald">Applied</span></td></tr>
+              <tr><td class="mono">v1.1.0</td><td>planned</td><td>Add cases:family namespace, rfeDeadline field</td><td><span class="badge b-muted">Pending</span></td></tr>
+              <tr><td class="mono">v1.2.0</td><td>planned</td><td>SEVIS batch cache namespace, DSO batch ops</td><td><span class="badge b-muted">Pending</span></td></tr>
+              <tr><td class="mono">v2.0.0</td><td>Year 2</td><td>GraphQL Federation key migration, supergraph</td><td><span class="badge b-muted">Planned</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-hd">GDPR Right-to-Erasure Protocol</div>
+          <div class="code" style="font-size:10px;line-height:1.75">
+<span class="c">// GDPR Article 17 — Right to Erasure</span>
+<span class="c">// Called when user requests account deletion</span>
+<span class="k">async function</span> <span class="m">eraseUserData</span>(userId) {
+  <span class="c">// 1. Delete all private personal keys</span>
+  <span class="k">const</span> privateNS = [
+    <span class="s">'users:profile:'</span>, <span class="s">'users:session:'</span>,
+    <span class="s">'cases:case:'</span>, <span class="s">'cases:timeline:'</span>,
+    <span class="s">'docs:meta:'</span>, <span class="s">'docs:ocr:'</span>,
+    <span class="s">'notifs:list:'</span>, <span class="s">'notifs:prefs:'</span>,
+    <span class="s">'billing:sub:'</span>, <span class="s">'billing:entitle:'</span>,
+    <span class="s">'ai:pred:'</span>, <span class="s">'ai:chat:'</span>
+  ];
+  <span class="k">for</span> (<span class="k">const</span> ns <span class="k">of</span> privateNS) {
+    <span class="k">await</span> storage.<span class="m">delete</span>(ns + userId);
+  }
+  
+  <span class="c">// 2. Anonymise audit records (keep for SOC 2)</span>
+  <span class="c">//    Replace userId with 'ERASED_{hash}'</span>
+  
+  <span class="c">// 3. Blockchain hashes remain (no PII on-chain)</span>
+  <span class="c">//    Per Architecture Risk §10 — GDPR compliant</span>
+  
+  <span class="c">// 4. Shared records: check other references first</span>
+  
+  <span class="k">await</span> audit.<span class="m">log</span>({
+    type: <span class="s">'GDPR_ERASURE'</span>,
+    userId, outcome: <span class="s">'success'</span>
+  });
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">TTL Cleanup Log</div>
+        <div class="log-stream" id="migrationLog"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   VISATRACK PRO — PERSISTENT DATA LAYER ENGINE
+   Implements window.storage API with full CRUD, validation,
+   TTL simulation, and schema enforcement for all 11 namespaces
+   ══════════════════════════════════════════════════════════ */
+
+// ── STORAGE ABSTRACTION ────────────────────────────────────────
+const storage = window.storage;
+
+// ── TOAST ──────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const icons = { ok:'✅', warn:'⚠️', err:'❌', info:'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.transition='all .2s'; el.style.opacity='0'; el.style.transform='translateX(40px)'; setTimeout(()=>el.remove(),220); }, 3200);
+}
+
+// ── NAV ────────────────────────────────────────────────────────
+const SCREEN_LABELS = {
+  overview:'Storage Overview', spec:'Key-Value Schema Spec',
+  users:'Users & Auth', cases:'Cases & Timelines',
+  documents:'Documents & OCR', notifications:'Notifications',
+  billing:'Billing & Subscriptions', ai:'AI & Predictions',
+  blockchain:'Blockchain Records', audit:'Audit & Compliance',
+  explorer:'KV Store Explorer', operations:'CRUD Operations Lab',
+  migration:'Migration & TTL',
+};
+function go(id) {
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('on'));
+  const scr = document.getElementById('scr-'+id);
+  if (scr) scr.classList.add('on');
+  const nav = document.getElementById('ni-'+id);
+  if (nav) nav.classList.add('on');
+  document.getElementById('tbCur').textContent = SCREEN_LABELS[id]||id;
+  if (id==='explorer') refreshExplorer();
+  if (id==='operations') updateOpForm();
+  refreshStorageCount();
+}
+
+// ── MODAL ──────────────────────────────────────────────────────
+function showModal(title, body) {
+  document.getElementById('modalBox').innerHTML = `<div class="modal-hd"><div class="modal-title">${title}</div><button class="modal-x" onclick="closeModal()">✕</button></div>${body}`;
+  document.getElementById('modalVeil').classList.add('on');
+}
+function closeModal() { document.getElementById('modalVeil').classList.remove('on'); }
+document.getElementById('modalVeil').addEventListener('click', e => { if(e.target.id==='modalVeil') closeModal(); });
+
+// ── LOG ────────────────────────────────────────────────────────
+function log(logId, level, op, msg) {
+  const el = document.getElementById(logId);
+  if (!el) return;
+  const now = new Date();
+  const ts = now.toTimeString().slice(0,8)+'.'+String(now.getMilliseconds()).padStart(3,'0');
+  const levelMap = { ok:'log-ok', warn:'log-warn', err:'log-err', info:'log-info' };
+  const labelMap = { ok:' OK ', warn:'WARN', err:' ERR', info:'INFO' };
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.innerHTML = `<span class="log-ts">${ts}</span><span class="log-op ${levelMap[level]||'log-info'}">[${labelMap[level]||level}]</span><span class="log-msg">${op} <em>${msg}</em></span>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+// ── DATA LAYER IMPLEMENTATION ──────────────────────────────────
+const DataLayer = {
+
+  // ── CORE HELPERS ──────────────────────────────────────────
+  async _set(key, value, shared=false) {
+    try {
+      const r = await storage.set(key, JSON.stringify(value), shared);
+      log('overviewLog','ok',`SET ${shared?'[shared]':'[private]'}`, key);
+      log('crudLog','ok','WRITE', `${key} → ${JSON.stringify(value).slice(0,60)}…`);
+      return r;
+    } catch(e) {
+      log('overviewLog','err','SET FAILED', `${key}: ${e.message}`);
+      return null;
+    }
+  },
+  async _get(key, shared=false) {
+    try {
+      const r = await storage.get(key, shared);
+      if (!r) return null;
+      log('crudLog','info','READ', `${key} → ${r.value.slice(0,60)}`);
+      return JSON.parse(r.value);
+    } catch(e) {
+      return null;
+    }
+  },
+  async _delete(key, shared=false) {
+    try {
+      await storage.delete(key, shared);
+      log('overviewLog','warn','DELETE', key);
+      return true;
+    } catch(e) { return false; }
+  },
+  async _list(prefix='', shared=false) {
+    try {
+      const r = await storage.list(prefix, shared);
+      return r ? r.keys : [];
+    } catch(e) { return []; }
+  },
+  _now() { return new Date().toISOString(); },
+  _uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{ const r=Math.random()*16|0; return(c==='x'?r:r&3|8).toString(16); }); },
+
+  // ── CASES ─────────────────────────────────────────────────
+  cases: {
+    async create(data) {
+      const rec = { ...data, createdAt: DataLayer._now(), statusUpdatedAt: DataLayer._now() };
+      const timelineRec = { caseId: rec.id, events: [], lastSyncedAt: DataLayer._now(), nextPollAt: DataLayer._now() };
+      await DataLayer._set(`cases:case:${rec.id}`, rec);
+      await DataLayer._set(`cases:timeline:${rec.id}`, timelineRec);
+      await DataLayer.audit.log({ type:'DATA_MODIFY', resource:`cases:case:${rec.id}`, outcome:'success', metadata:{ action:'create', caseId:rec.id } });
+      return rec;
+    },
+    async get(caseId) {
+      return DataLayer._get(`cases:case:${caseId}`);
+    },
+    async list(userId) {
+      const keys = await DataLayer._list('cases:case:');
+      const results = [];
+      for (const k of keys) {
+        const c = await DataLayer._get(k);
+        if (c && (c.userId === userId || !userId)) results.push(c);
+      }
+      return results;
+    },
+    async update(caseId, patch) {
+      const existing = await this.get(caseId);
+      if (!existing) return null;
+      const updated = { ...existing, ...patch, updatedAt: DataLayer._now() };
+      await DataLayer._set(`cases:case:${caseId}`, updated);
+      return updated;
+    },
+    async updateStatus(caseId, status) {
+      return this.update(caseId, { status, statusUpdatedAt: DataLayer._now() });
+    },
+    async appendTimeline(caseId, event) {
+      const tl = await DataLayer._get(`cases:timeline:${caseId}`) || { caseId, events:[] };
+      tl.events.push({ ...event, addedAt: DataLayer._now() });
+      tl.lastSyncedAt = DataLayer._now();
+      await DataLayer._set(`cases:timeline:${caseId}`, tl);
+      return tl;
+    },
+    async delete(caseId) {
+      await DataLayer._delete(`cases:case:${caseId}`);
+      await DataLayer._delete(`cases:timeline:${caseId}`);
+      await DataLayer.audit.log({ type:'DATA_MODIFY', resource:`cases:case:${caseId}`, outcome:'success', metadata:{ action:'delete' } });
+    }
+  },
+
+  // ── USERS ─────────────────────────────────────────────────
+  users: {
+    async create(data) {
+      const rec = { ...data, createdAt: DataLayer._now(), updatedAt: DataLayer._now() };
+      await DataLayer._set(`users:profile:${rec.id}`, rec);
+      await DataLayer.audit.log({ type:'DATA_MODIFY', resource:`users:profile:${rec.id}`, outcome:'success', metadata:{ action:'create', role:rec.role } });
+      return rec;
+    },
+    async get(userId) { return DataLayer._get(`users:profile:${userId}`); },
+    async update(userId, patch) {
+      const u = await this.get(userId);
+      if (!u) return null;
+      const updated = { ...u, ...patch, updatedAt: DataLayer._now() };
+      await DataLayer._set(`users:profile:${userId}`, updated);
+      return updated;
+    },
+    async list() {
+      const keys = await DataLayer._list('users:profile:');
+      const users = [];
+      for (const k of keys) {
+        const u = await DataLayer._get(k);
+        if (u) users.push(u);
+      }
+      return users;
+    },
+    async createSession(userId, sessionData) {
+      const rec = { ...sessionData, userId, issuedAt: DataLayer._now(), expiresAt: new Date(Date.now()+86400000).toISOString() };
+      await DataLayer._set(`users:session:${userId}`, rec);
+      await DataLayer.audit.log({ type:'LOGIN', resource:`users:session:${userId}`, outcome:'success', metadata:{ mfaVerified:sessionData.mfaVerified } });
+      return rec;
+    },
+    async deleteSession(userId) {
+      await DataLayer._delete(`users:session:${userId}`);
+      await DataLayer.audit.log({ type:'LOGOUT', resource:`users:session:${userId}`, outcome:'success', metadata:{} });
+    }
+  },
+
+  // ── DOCUMENTS ─────────────────────────────────────────────
+  docs: {
+    async create(data) {
+      const rec = { ...data, ocrStatus:'pending', blockchainStatus:'pending', uploadedAt: DataLayer._now() };
+      await DataLayer._set(`docs:meta:${rec.id}`, rec);
+      await DataLayer.audit.log({ type:'DOCUMENT_UPLOAD', resource:`docs:meta:${rec.id}`, outcome:'success', metadata:{ docType:rec.type, caseId:rec.caseId } });
+      return rec;
+    },
+    async get(docId) { return DataLayer._get(`docs:meta:${docId}`); },
+    async listByCase(caseId) {
+      const keys = await DataLayer._list('docs:meta:');
+      const docs = [];
+      for (const k of keys) {
+        const d = await DataLayer._get(k);
+        if (d && d.caseId === caseId) docs.push(d);
+      }
+      return docs;
+    },
+    async setVerified(docId, hash) {
+      const doc = await this.get(docId);
+      if (!doc) return null;
+      const updated = { ...doc, blockchainStatus:'verified', blockchainHash:hash, verifiedAt: DataLayer._now() };
+      await DataLayer._set(`docs:meta:${docId}`, updated);
+      await DataLayer.chain.record(docId, hash, { caseId: doc.caseId, docType: doc.type });
+      await DataLayer.audit.log({ type:'BLOCKCHAIN_TX', resource:`docs:meta:${docId}`, outcome:'success', metadata:{ hash } });
+      return updated;
+    },
+    async storeOCR(docId, ocrResult) {
+      const rec = { ...ocrResult, docId, processedAt: DataLayer._now() };
+      await DataLayer._set(`docs:ocr:${docId}`, rec);
+      const doc = await this.get(docId);
+      if (doc) await DataLayer._set(`docs:meta:${docId}`, { ...doc, ocrStatus:'complete' });
+      return rec;
+    },
+    async getOCR(docId) { return DataLayer._get(`docs:ocr:${docId}`); }
+  },
+
+  // ── NOTIFICATIONS ─────────────────────────────────────────
+  notifs: {
+    async push(userId, notif) {
+      const existing = await DataLayer._get(`notifs:list:${userId}`) || [];
+      const rec = { ...notif, id: `ntf_${DataLayer._uuid().slice(0,8)}`, read: false, createdAt: DataLayer._now() };
+      existing.unshift(rec);
+      if (existing.length > 100) existing.splice(100);
+      await DataLayer._set(`notifs:list:${userId}`, existing);
+      return rec;
+    },
+    async list(userId, filter) {
+      const all = await DataLayer._get(`notifs:list:${userId}`) || [];
+      if (!filter || filter==='all') return all;
+      return all.filter(n => n.type === filter);
+    },
+    async markRead(userId, ids) {
+      const all = await DataLayer._get(`notifs:list:${userId}`) || [];
+      const updated = all.map(n => ids.includes(n.id) ? {...n, read:true} : n);
+      await DataLayer._set(`notifs:list:${userId}`, updated);
+      return updated;
+    },
+    async getPrefs(userId) { return DataLayer._get(`notifs:prefs:${userId}`); },
+    async savePrefs(userId, prefs) {
+      const rec = { ...prefs, userId, updatedAt: DataLayer._now() };
+      await DataLayer._set(`notifs:prefs:${userId}`, rec);
+      return rec;
+    }
+  },
+
+  // ── BILLING ───────────────────────────────────────────────
+  billing: {
+    async createSub(data) {
+      const rec = { ...data, createdAt: DataLayer._now() };
+      await DataLayer._set(`billing:sub:${rec.id}`, rec);
+      await this.updateEntitlements(rec.userId, rec.plan);
+      await DataLayer.audit.log({ type:'PAYMENT', resource:`billing:sub:${rec.id}`, outcome:'success', metadata:{ plan:rec.plan } });
+      return rec;
+    },
+    async getSub(subId) { return DataLayer._get(`billing:sub:${subId}`); },
+    async getEntitlements(userId) { return DataLayer._get(`billing:entitle:${userId}`); },
+    async updateEntitlements(userId, plan) {
+      const planMap = {
+        free:       { maxCases:1, maxStorageMB:100, aiEnabled:false, apiEnabled:false, familySharing:false, blockchainVerify:false, rateLimit:100 },
+        basic:      { maxCases:3, maxStorageMB:1024, aiEnabled:false, apiEnabled:false, familySharing:false, blockchainVerify:true, rateLimit:1000 },
+        premium:    { maxCases:-1, maxStorageMB:10240, aiEnabled:true, apiEnabled:false, familySharing:true, blockchainVerify:true, rateLimit:1000 },
+        firm:       { maxCases:200, maxStorageMB:204800, aiEnabled:true, apiEnabled:true, familySharing:true, blockchainVerify:true, rateLimit:10000 },
+        enterprise: { maxCases:-1, maxStorageMB:-1, aiEnabled:true, apiEnabled:true, familySharing:true, blockchainVerify:true, rateLimit:30000 },
+      };
+      const entitlements = { userId, plan, ...planMap[plan]||planMap.free, updatedAt: DataLayer._now() };
+      await DataLayer._set(`billing:entitle:${userId}`, entitlements);
+      return entitlements;
+    }
+  },
+
+  // ── AI ────────────────────────────────────────────────────
+  ai: {
+    async storePrediction(caseId, pred) {
+      const rec = { ...pred, caseId, generatedAt: DataLayer._now() };
+      await DataLayer._set(`ai:pred:${caseId}`, rec);
+      await DataLayer._set(`cache:ai-pred:${caseId}`, rec);
+      return rec;
+    },
+    async getPrediction(caseId) {
+      return DataLayer._get(`ai:pred:${caseId}`);
+    },
+    async appendChat(userId, message) {
+      const existing = await DataLayer._get(`ai:chat:${userId}`) || { userId, messages:[], totalTokens:0, sessionStarted: DataLayer._now() };
+      const msg = { ...message, timestamp: DataLayer._now() };
+      existing.messages.push(msg);
+      existing.totalTokens = (existing.totalTokens||0) + (message.tokens||0);
+      if (existing.messages.length > 50) existing.messages = existing.messages.slice(-50);
+      await DataLayer._set(`ai:chat:${userId}`, existing);
+      return msg;
+    },
+    async getChat(userId) { return DataLayer._get(`ai:chat:${userId}`); },
+    async clearChat(userId) { await DataLayer._delete(`ai:chat:${userId}`); }
+  },
+
+  // ── BLOCKCHAIN ────────────────────────────────────────────
+  chain: {
+    async record(docId, hash, meta={}) {
+      const rec = {
+        docId, sha256Hash: hash,
+        blockNumber: 847291 + Math.floor(Math.random()*100),
+        txId: `tx_${DataLayer._uuid().slice(0,12)}`,
+        event: 'DocumentVerified',
+        networkId: 'visatrack-channel-1',
+        chaincodeVersion: 'DocVerify v1.3',
+        confirmedAt: DataLayer._now(), ...meta
+      };
+      await DataLayer._set(`chain:record:${docId}`, rec, true); // SHARED
+      return rec;
+    },
+    async verify(docId, providedHash) {
+      const rec = await DataLayer._get(`chain:record:${docId}`, true);
+      if (!rec) return { verified:false, reason:'No chain record found' };
+      const match = rec.sha256Hash === providedHash;
+      await DataLayer.audit.log({ type:'BLOCKCHAIN_TX', resource:`chain:record:${docId}`, outcome:match?'success':'denied', metadata:{ event:'verify', match } });
+      return { verified:match, blockNumber:rec.blockNumber, confirmedAt:rec.confirmedAt };
+    },
+    async issueVC(userId, vcData) {
+      const vc = {
+        id: `vc_${DataLayer._uuid().slice(0,12)}`,
+        subjectId: `did:visatrack:${userId}`,
+        issuer: 'did:visatrack:issuer',
+        type: ['VerifiableCredential','ImmigrationStatus'],
+        status: 'active',
+        ...vcData,
+        issuedAt: DataLayer._now()
+      };
+      await DataLayer._set(`chain:vc:${userId}`, vc, true); // SHARED
+      await DataLayer.audit.log({ type:'BLOCKCHAIN_TX', resource:`chain:vc:${userId}`, outcome:'success', metadata:{ event:'VCIssued', vcId:vc.id } });
+      return vc;
+    },
+    async getVC(userId) { return DataLayer._get(`chain:vc:${userId}`, true); }
+  },
+
+  // ── AUDIT ─────────────────────────────────────────────────
+  audit: {
+    async log(event) {
+      const id = `evt_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+      const rec = {
+        id, ...event,
+        userId: event.userId || 'system',
+        tenantId: event.tenantId || 'system',
+        ipAddress: '203.0.xxx.xxx',
+        userAgent: navigator.userAgent.slice(0,80),
+        timestamp: new Date().toISOString()
+      };
+      await DataLayer._set(`audit:event:${id}`, rec, true); // SHARED, 7yr
+      return rec;
+    },
+    async list() {
+      const keys = await DataLayer._list('audit:event:', true);
+      const events = [];
+      for (const k of keys.slice(0,50)) {
+        const e = await DataLayer._get(k, true);
+        if (e) events.push(e);
+      }
+      return events.sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+    }
+  },
+
+  // ── CACHE ─────────────────────────────────────────────────
+  cache: {
+    async setGovtApi(jurisdiction, caseId, data) {
+      await DataLayer._set(`cache:govt-api:${jurisdiction}:${caseId}`, { data, cachedAt: DataLayer._now() });
+    },
+    async getGovtApi(jurisdiction, caseId) {
+      return DataLayer._get(`cache:govt-api:${jurisdiction}:${caseId}`);
+    }
+  }
+};
+
+// ── SEED DATA ──────────────────────────────────────────────────
+async function seedAll() {
+  showLoader();
+  try {
+    await seedUsers();
+    await seedCases();
+    await seedDocs();
+    await seedNotifs();
+    await seedBilling();
+    await seedAI();
+    await seedChain();
+    await seedAuditLog();
+    await refreshStorageCount();
+    toast('All sample data seeded successfully', 'ok');
+    log('overviewLog','ok','SEED ALL','11 namespaces populated with sample data');
+  } catch(e) {
+    toast('Seed error: '+e.message, 'err');
+  }
+  hideLoader();
+}
+
+async function seedEntity(entity) {
+  showLoader();
+  const map = { users:seedUsers, cases:seedCases, docs:seedDocs, notifs:seedNotifs, billing:seedBilling, ai:seedAI, chain:seedChain, audit:seedAuditLog };
+  if (map[entity]) {
+    await map[entity]();
+    await refreshStorageCount();
+    toast(`Seeded ${entity} namespace`, 'ok');
+    await renderTableForCurrentScreen();
+  }
+  hideLoader();
+}
+
+async function seedUsers() {
+  const users = [
+    { id:'usr_alex_j_001', email:'alex@visatrackpro.com', firstName:'Alex', lastName:'Johnson', role:'applicant', tenantId:'ten_b2c_001', plan:'premium', jurisdictions:['US','CA'], mfaEnabled:true, nationality:'IN' },
+    { id:'usr_sarah_chen_atty', email:'sarah@chenlawfirm.com', firstName:'Sarah', lastName:'Chen', role:'attorney', tenantId:'ten_firm_082', plan:'firm', jurisdictions:['US'], mfaEnabled:true, nationality:'US' },
+    { id:'usr_acme_hr_002', email:'hr@acmecorp.com', firstName:'Jordan', lastName:'Reyes', role:'hr', tenantId:'ten_acme_corp', plan:'enterprise', jurisdictions:['US','CA','UK'], mfaEnabled:true, nationality:'US' },
+    { id:'usr_ucla_dso_001', email:'dso@ucla.edu', firstName:'Dr. Kim', lastName:'Nakamura', role:'dso', tenantId:'ten_ucla', plan:'firm', jurisdictions:['US'], mfaEnabled:true, nationality:'US' },
+  ];
+  for (const u of users) await DataLayer.users.create(u);
+  await DataLayer.users.createSession('usr_alex_j_001', { mfaVerified:true, deviceId:'dev_chrome_macos', jwtToken:'eyJ...' });
+  renderUsersTable(users);
+}
+
+async function seedCases() {
+  const cases = [
+    { id:'WAC2600234567', userId:'usr_alex_j_001', tenantId:'ten_b2c_001', jurisdiction:'USCIS', visaType:'H-1B', status:'in_progress', processingType:'regular', serviceCenter:'Vermont SC', petitioner:'Acme Corp Inc.', deadline:'2026-04-30T00:00:00Z', priority:'normal', filedAt:'2025-10-15T00:00:00Z' },
+    { id:'SRC2600456789', userId:'usr_alex_j_001', tenantId:'ten_b2c_001', jurisdiction:'USCIS', visaType:'F-1 OPT', status:'rfe', processingType:'regular', serviceCenter:'California SC', petitioner:'UCLA', rfeDeadline:'2026-03-16T00:00:00Z', priority:'urgent', deadline:'2026-03-16T00:00:00Z', filedAt:'2026-01-03T00:00:00Z' },
+    { id:'IOE2600789012', userId:'usr_sarah_chen_atty', tenantId:'ten_firm_082', jurisdiction:'USCIS', visaType:'O-1A', status:'pending', processingType:'premium', serviceCenter:'USCIS NSC', petitioner:'Innovate Labs', priority:'low', filedAt:'2026-02-01T00:00:00Z' },
+    { id:'UK0041920482', userId:'usr_acme_hr_002', tenantId:'ten_acme_corp', jurisdiction:'UKVI', visaType:'Skilled Worker', status:'approved', processingType:'regular', serviceCenter:'UKVI', petitioner:'Acme UK Ltd.', priority:'low', filedAt:'2025-11-15T00:00:00Z' },
+  ];
+  for (const c of cases) {
+    await DataLayer.cases.create(c);
+    await DataLayer.cases.appendTimeline(c.id, { stage:'Filed', status:'done', date:c.filedAt, note:'Petition submitted', source:'manual' });
+    if (c.status !== 'pending') await DataLayer.cases.appendTimeline(c.id, { stage:'Receipt', status:'done', date:c.filedAt, note:'Receipt notice issued', source:'govt_api' });
+    if (['in_progress','rfe'].includes(c.status)) await DataLayer.cases.appendTimeline(c.id, { stage:'Biometrics', status:c.status==='rfe'?'done':'active', date:'2026-02-01T00:00:00Z', note:'Biometrics scheduled', source:'govt_api' });
+    if (c.status==='rfe') await DataLayer.cases.appendTimeline(c.id, { stage:'RFE', status:'active', date:'2026-03-04T00:00:00Z', note:'RFE issued — respond by Mar 16', source:'govt_api' });
+    if (c.status==='approved') await DataLayer.cases.appendTimeline(c.id, { stage:'Decision', status:'done', date:'2026-03-01T00:00:00Z', note:'APPROVED — I-797B issued', source:'govt_api' });
+  }
+  await renderCasesTable(cases);
+}
+
+async function seedDocs() {
+  const docs = [
+    { id:'doc_4521', caseId:'WAC2600234567', userId:'usr_alex_j_001', name:'Form_I-129_Petition.pdf', type:'petition', mimeType:'application/pdf', sizeBytes:2457600, s3Key:'visa-docs/ten_b2c_001/usr_alex/doc_4521.pdf' },
+    { id:'doc_4522', caseId:'WAC2600234567', userId:'usr_alex_j_001', name:'I-797C_Receipt_Notice.pdf', type:'notice', mimeType:'application/pdf', sizeBytes:819200, s3Key:'visa-docs/ten_b2c_001/usr_alex/doc_4522.pdf' },
+    { id:'doc_4523', caseId:'SRC2600456789', userId:'usr_alex_j_001', name:'Form_I-765_OPT.pdf', type:'petition', mimeType:'application/pdf', sizeBytes:1843200, s3Key:'visa-docs/ten_b2c_001/usr_alex/doc_4523.pdf' },
+    { id:'doc_4524', caseId:'SRC2600456789', userId:'usr_alex_j_001', name:'RFE_Notice.pdf', type:'notice', mimeType:'application/pdf', sizeBytes:614400, s3Key:'visa-docs/ten_b2c_001/usr_alex/doc_4524.pdf' },
+    { id:'doc_4525', caseId:'WAC2600234567', userId:'usr_alex_j_001', name:'Passport_Alex.jpg', type:'id', mimeType:'image/jpeg', sizeBytes:3145728, s3Key:'visa-docs/ten_b2c_001/usr_alex/doc_4525.jpg', expiresAt:'2031-01-15T00:00:00Z' },
+  ];
+  for (const d of docs) {
+    await DataLayer.docs.create(d);
+    await DataLayer.docs.setVerified(d.id, `0x${Math.random().toString(16).slice(2,10)}${Math.random().toString(16).slice(2,26)}`);
+    await DataLayer.docs.storeOCR(d.id, { provider:'aws_textract', confidence:0.972, fields:{ documentType:d.name, receiptNumber:d.caseId, applicantName:'Alex Johnson', visaType:d.type==='id'?'Passport':d.caseId.includes('WAC')?'H-1B':'F-1 OPT', filingDate:'2025-10-15' }, rawText:'[Extracted text…]' });
+  }
+  await renderDocsTable(docs);
+}
+
+async function seedNotifs() {
+  const notifs = [
+    { type:'deadline', priority:'urgent', title:'RFE Response Due in 12 Days', body:'Your RFE for Case #SRC2600456789 must be responded to by March 16, 2026.', caseId:'SRC2600456789', channels:['push','email','sms'] },
+    { type:'status', priority:'normal', title:'Biometrics Appointment Confirmed', body:'Your biometrics appointment is scheduled for March 22, 2026 at 9:00 AM.', caseId:'WAC2600234567', channels:['push','email'] },
+    { type:'status', priority:'high', title:'Request for Evidence Received', body:'USCIS has issued an RFE for Case #SRC2600456789.', caseId:'SRC2600456789', channels:['push','email','sms'] },
+    { type:'document', priority:'low', title:'Document Blockchain Verified', body:'Your LCA Certification has been verified on Hyperledger Fabric.', caseId:'WAC2600234567', channels:['push'] },
+    { type:'ai', priority:'low', title:'AI Insight: Processing Time Updated', body:'H-1B processing times improved 8% this month. Est. decision: April 2026.', caseId:'WAC2600234567', channels:['email'] },
+  ];
+  for (const n of notifs) await DataLayer.notifs.push('usr_alex_j_001', n);
+  await DataLayer.notifs.savePrefs('usr_alex_j_001', { push:true, email:true, sms:true, statusUpdates:true, deadlineReminders:true, aiInsights:true, language:'en', quietHoursStart:'22:00', quietHoursEnd:'08:00' });
+  await renderNotifsTable(notifs.map((n,i)=>({...n, id:`ntf_00${i+1}`, read:i>2})));
+}
+
+async function seedBilling() {
+  const subs = [
+    { id:'sub_premium_alex', userId:'usr_alex_j_001', tenantId:'ten_b2c_001', plan:'premium', status:'active', stripeSubId:'sub_1234', stripeCustId:'cus_5678', currentPeriodEnd:'2026-04-04T00:00:00Z' },
+    { id:'sub_firm_chen', userId:'usr_sarah_chen_atty', tenantId:'ten_firm_082', plan:'firm', status:'active', stripeSubId:'sub_2345', stripeCustId:'cus_6789', currentPeriodEnd:'2026-04-15T00:00:00Z' },
+    { id:'sub_enterprise_acme', userId:'usr_acme_hr_002', tenantId:'ten_acme_corp', plan:'enterprise', status:'active', stripeSubId:'sub_3456', stripeCustId:'cus_7890', currentPeriodEnd:'2026-05-01T00:00:00Z' },
+  ];
+  for (const s of subs) await DataLayer.billing.createSub(s);
+  await renderBillingTable(subs);
+}
+
+async function seedAI() {
+  await DataLayer.ai.storePrediction('WAC2600234567', { model:'H1B_XGB_v3', approvalProbability:0.814, confidence:0.82, riskScore:0.22, riskFactors:['regular_processing_selected'], timelineP25:145, timelineP50:180, timelineP75:215, estimatedDecision:'2026-04-15T00:00:00Z', sampleSize:12400 });
+  await DataLayer.ai.storePrediction('SRC2600456789', { model:'F1_GBM_v2', approvalProbability:0.71, confidence:0.75, riskScore:0.55, riskFactors:['rfe_active','deadline_approaching'], timelineP25:60, timelineP50:90, timelineP75:120, estimatedDecision:'2026-05-01T00:00:00Z', sampleSize:8100 });
+  await DataLayer.ai.appendChat('usr_alex_j_001', { role:'user', content:'What is my H-1B case status?', tokens:12, model:'gpt-4-turbo' });
+  await DataLayer.ai.appendChat('usr_alex_j_001', { role:'assistant', content:'Your H-1B case WAC2600234567 is currently at Biometrics stage...', tokens:147, model:'gpt-4-turbo' });
+  await DataLayer.cache.setGovtApi('USCIS', 'WAC2600234567', { status:'Biometrics Scheduled', lastUpdated: new Date().toISOString() });
+}
+
+async function seedChain() {
+  await DataLayer.chain.record('doc_4521', '0x3f8a2c1b9e4d7a6fc2e1d8b4a7f3c5d9e2b1', { caseId:'WAC2600234567', docType:'petition' });
+  await DataLayer.chain.record('doc_4522', '0x9c4e2a8b1f6d3c5ea7b4c9d2e1f8a3b6c4d7', { caseId:'WAC2600234567', docType:'notice' });
+  await DataLayer.chain.record('doc_4523', '0x7a1e9d4c2b8f5a3de6f2c8b1a4d7e3c9f5a2', { caseId:'SRC2600456789', docType:'petition' });
+  await DataLayer.chain.issueVC('usr_alex_j_001', { claims:{ caseNumber:'WAC2600234567', visaType:'H-1B', status:'in_progress', jurisdiction:'USCIS' }, expiresAt:'2027-01-01T00:00:00Z' });
+  await renderChainTable();
+}
+
+async function seedAuditLog() {
+  const events = [
+    { type:'LOGIN', userId:'usr_alex_j_001', resource:'users:session:usr_alex_j_001', outcome:'success', metadata:{ mfaVerified:true, device:'Chrome/macOS' } },
+    { type:'DATA_ACCESS', userId:'usr_alex_j_001', resource:'cases:case:WAC2600234567', outcome:'success', metadata:{ method:'GET' } },
+    { type:'DOCUMENT_UPLOAD', userId:'usr_alex_j_001', resource:'docs:meta:doc_4525', outcome:'success', metadata:{ docType:'id', size:'3.1MB' } },
+    { type:'BLOCKCHAIN_TX', userId:'system', resource:'chain:record:doc_4521', outcome:'success', metadata:{ event:'DocumentVerified', block:847291 } },
+    { type:'PAYMENT', userId:'usr_alex_j_001', resource:'billing:sub:sub_premium_alex', outcome:'success', metadata:{ plan:'premium', amount:'$19.99' } },
+    { type:'DATA_MODIFY', userId:'usr_sarah_chen_atty', resource:'cases:case:IOE2600789012', outcome:'success', metadata:{ action:'updateStatus', status:'pending' } },
+    { type:'API_CALL', userId:'usr_acme_hr_002', resource:'/v1/cases', outcome:'success', metadata:{ method:'GET', count:142 } },
+  ];
+  for (const e of events) await DataLayer.audit.log(e);
+  await renderAuditTable();
+}
+
+// ── TABLE RENDERS ──────────────────────────────────────────────
+async function renderTableForCurrentScreen() {
+  const screen = document.querySelector('.scr.on');
+  if (!screen) return;
+  const id = screen.id.replace('scr-','');
+  if (id==='users') { const u = await DataLayer.users.list(); renderUsersTable(u); }
+  if (id==='cases') { const c = await DataLayer.cases.list(); await renderCasesTable(c); }
+  if (id==='documents') { renderDocsTable([]); }
+  if (id==='notifications') renderNotifsTable([]);
+  if (id==='billing') renderBillingTable([]);
+  if (id==='blockchain') await renderChainTable();
+  if (id==='audit') await renderAuditTable();
+  if (id==='explorer') await refreshExplorer();
+}
+
+function renderUsersTable(users) {
+  const body = document.getElementById('usersBody');
+  if (!body) return;
+  const roleColors = { applicant:'b-teal', attorney:'b-violet', hr:'b-sky', dso:'b-emerald', admin:'b-rose' };
+  body.innerHTML = users.map(u => `
+    <tr>
+      <td class="mono">users:profile:${u.id}</td>
+      <td>${u.firstName} ${u.lastName}</td>
+      <td><span class="badge ${roleColors[u.role]||'b-muted'}">${u.role}</span></td>
+      <td><span class="badge b-amber">${u.plan}</span></td>
+      <td>${u.mfaEnabled ? '✅' : '—'}</td>
+      <td class="mono" style="font-size:9.5px">${u.updatedAt||u.createdAt||'—'}</td>
+      <td><button class="btn btn-secondary btn-xs" onclick="inspectKey('users:profile:${u.id}')">View</button> <button class="btn btn-danger btn-xs" onclick="deleteKey('users:profile:${u.id}','users')">Del</button></td>
+    </tr>`).join('');
+}
+
+async function renderCasesTable(cases) {
+  const body = document.getElementById('casesBody');
+  if (!body) return;
+  const statusColors = { in_progress:'b-sky', rfe:'b-amber', approved:'b-emerald', denied:'b-rose', pending:'b-muted' };
+  body.innerHTML = cases.map(c => `
+    <tr>
+      <td class="mono">cases:case:${c.id}</td>
+      <td class="mono">${c.id}</td>
+      <td>${c.visaType}</td>
+      <td><span class="badge b-muted">${c.jurisdiction}</span></td>
+      <td><span class="badge ${statusColors[c.status]||'b-muted'}">${c.status}</span></td>
+      <td class="mono" style="font-size:9.5px;color:${c.priority==='urgent'?'var(--rose)':'inherit'}">${c.deadline?c.deadline.slice(0,10):'—'}</td>
+      <td><button class="btn btn-secondary btn-xs" onclick="inspectKey('cases:case:${c.id}')">View</button> <button class="btn btn-danger btn-xs" onclick="deleteKey('cases:case:${c.id}','cases')">Del</button></td>
+    </tr>`).join('');
+}
+
+function renderDocsTable(docs) {
+  const body = document.getElementById('docsBody');
+  if (!body) return;
+  const ocrColors = { pending:'b-muted', processing:'b-sky', complete:'b-emerald', failed:'b-rose' };
+  const bcColors  = { pending:'b-muted', verified:'b-teal', failed:'b-rose' };
+  body.innerHTML = docs.map(d => `
+    <tr>
+      <td class="mono">docs:meta:${d.id}</td>
+      <td>${d.name}</td>
+      <td><span class="badge b-violet">${d.type}</span></td>
+      <td><span class="badge ${ocrColors[d.ocrStatus]||'b-muted'}">${d.ocrStatus||'pending'}</span></td>
+      <td><span class="badge ${bcColors[d.blockchainStatus]||'b-muted'}">${d.blockchainStatus||'pending'}</span></td>
+      <td class="mono">${Math.round((d.sizeBytes||0)/1024)}KB</td>
+      <td><button class="btn btn-secondary btn-xs" onclick="inspectKey('docs:meta:${d.id}')">View</button></td>
+    </tr>`).join('');
+}
+
+function renderNotifsTable(notifs) {
+  const body = document.getElementById('notifsBody');
+  if (!body) return;
+  const tc = { deadline:'b-rose', status:'b-teal', document:'b-sky', ai:'b-violet', billing:'b-amber' };
+  const pc = { urgent:'b-rose', high:'b-amber', normal:'b-sky', low:'b-muted' };
+  body.innerHTML = notifs.map(n => `
+    <tr>
+      <td class="mono">${n.id||'ntf_…'}</td>
+      <td><span class="badge ${tc[n.type]||'b-muted'}">${n.type}</span></td>
+      <td><span class="badge ${pc[n.priority]||'b-muted'}">${n.priority}</span></td>
+      <td>${n.title}</td>
+      <td>${n.read?'<span class="badge b-muted">read</span>':'<span class="badge b-teal">unread</span>'}</td>
+      <td class="mono">${(n.channels||[]).join(', ')}</td>
+      <td><button class="btn btn-secondary btn-xs" onclick="inspectKey('notifs:list:usr_alex_j_001')">View All</button></td>
+    </tr>`).join('');
+}
+
+function renderBillingTable(subs) {
+  const body = document.getElementById('billingBody');
+  if (!body) return;
+  const pc = { free:'b-muted', basic:'b-sky', premium:'b-teal', firm:'b-amber', enterprise:'b-rose' };
+  body.innerHTML = subs.map(s => `
+    <tr>
+      <td class="mono">billing:sub:${s.id}</td>
+      <td>${s.userId.replace('usr_','')}</td>
+      <td><span class="badge ${pc[s.plan]||'b-muted'}">${s.plan}</span></td>
+      <td><span class="badge b-emerald">${s.status}</span></td>
+      <td class="mono">${s.plan==='enterprise'||s.plan==='premium'?'∞':s.plan==='firm'?'200':s.plan==='basic'?'3':'1'}</td>
+      <td>${s.plan==='enterprise'||s.plan==='premium'||s.plan==='firm'?'✅':'—'}</td>
+      <td class="mono" style="font-size:9.5px">${s.currentPeriodEnd?.slice(0,10)||'—'}</td>
+    </tr>`).join('');
+}
+
+async function renderChainTable() {
+  const body = document.getElementById('chainBody');
+  if (!body) return;
+  const keys = await DataLayer._list('chain:record:', true);
+  const rows = [];
+  for (const k of keys) {
+    const r = await DataLayer._get(k, true);
+    if (r) rows.push(r);
+  }
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ice3);padding:20px">No chain records — click "Seed Chain Records"</td></tr>'; return; }
+  body.innerHTML = rows.map(r => `
+    <tr>
+      <td class="mono">chain:record:${r.docId}</td>
+      <td><span class="badge b-violet">${r.event}</span></td>
+      <td class="mono" style="font-size:9.5px">${r.sha256Hash?.slice(0,22)}…</td>
+      <td class="mono">#${r.blockNumber}</td>
+      <td><span class="badge b-emerald">confirmed</span></td>
+      <td class="mono" style="font-size:9.5px">${r.confirmedAt?.slice(0,19)}</td>
+    </tr>`).join('');
+}
+
+async function renderAuditTable() {
+  const body = document.getElementById('auditBody');
+  if (!body) return;
+  const events = await DataLayer.audit.list();
+  if (!events.length) { body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ice3);padding:20px">No audit events — click "Seed Audit Log"</td></tr>'; return; }
+  const tc = { LOGIN:'b-sky', LOGOUT:'b-muted', DATA_ACCESS:'b-teal', DATA_MODIFY:'b-amber', BLOCKCHAIN_TX:'b-violet', PAYMENT:'b-emerald', DOCUMENT_UPLOAD:'b-sky', API_CALL:'b-muted', GDPR_ERASURE:'b-rose' };
+  body.innerHTML = events.slice(0,10).map(e => `
+    <tr>
+      <td class="mono">${e.id}</td>
+      <td><span class="badge ${tc[e.type]||'b-muted'}">${e.type}</span></td>
+      <td class="mono">${e.userId?.slice(0,16)}</td>
+      <td class="mono" style="font-size:9.5px">${e.resource?.slice(0,35)}</td>
+      <td><span class="badge ${e.outcome==='success'?'b-emerald':e.outcome==='denied'?'b-rose':'b-amber'}">${e.outcome}</span></td>
+      <td class="mono" style="font-size:9.5px">${e.timestamp?.slice(0,19)}</td>
+    </tr>`).join('');
+}
+
+// ── EXPLORER ───────────────────────────────────────────────────
+async function refreshExplorer() {
+  const prefix = document.getElementById('explorerFilter')?.value || '';
+  const privateKeys = await DataLayer._list(prefix, false);
+  const sharedKeys = await DataLayer._list(prefix, true);
+  document.getElementById('explTotalKeys').textContent = privateKeys.length + sharedKeys.length;
+  document.getElementById('explPrivateKeys').textContent = privateKeys.length;
+  document.getElementById('explSharedKeys').textContent = sharedKeys.length;
+
+  // Composition bars
+  const nsMap = {};
+  [...privateKeys, ...sharedKeys].forEach(k => {
+    const ns = k.split(':')[0] + ':';
+    nsMap[ns] = (nsMap[ns]||0) + 1;
+  });
+  const total = Object.values(nsMap).reduce((a,b)=>a+b,0)||1;
+  const nsColors = { 'users:':'-teal','cases:':'-sky','docs:':'-violet','notifs:':'-amber','billing:':'-emerald','ai:':'-violet','chain:':'-teal','audit:':'-rose','cache:':'-amber','kafka:':'-sky','meta:':'-muted' };
+  const comp = document.getElementById('explorerComposition');
+  if (comp) comp.innerHTML = Object.entries(nsMap).sort((a,b)=>b[1]-a[1]).map(([ns,cnt])=>`
+    <div class="rl-row">
+      <div class="rl-lbl" style="font-family:var(--mono);font-size:10px">${ns}</div>
+      <div class="rl-bar"><div class="rl-fill" style="width:${cnt/total*100}%;background:var(--${(nsColors[ns]||'-muted').startsWith('-')?'ice3':nsColors[ns]})"></div></div>
+      <div class="rl-val">${cnt} key${cnt!==1?'s':''}</div>
+    </div>`).join('');
+
+  // Size estimate
+  let sizeEst = 0;
+  for (const k of privateKeys) { try { const r = await storage.get(k, false); if(r) sizeEst += r.value.length; } catch{} }
+  for (const k of sharedKeys)  { try { const r = await storage.get(k, true);  if(r) sizeEst += r.value.length; } catch{} }
+  document.getElementById('explSize').textContent = sizeEst > 1024 ? `${(sizeEst/1024).toFixed(1)}KB` : `${sizeEst}B`;
+
+  // Key list
+  const list = document.getElementById('explorerList');
+  if (!list) return;
+  const allKeys = [
+    ...privateKeys.map(k=>({key:k, shared:false})),
+    ...sharedKeys.map(k=>({key:k, shared:true}))
+  ].sort((a,b)=>a.key.localeCompare(b.key));
+
+  if (!allKeys.length) { list.innerHTML = '<div style="text-align:center;color:var(--ice3);padding:30px;font-size:12px">No keys found. Seed data first.</div>'; return; }
+  list.innerHTML = allKeys.map(({key,shared}) => `
+    <div class="kv-row" onclick="inspectKey('${key}',${shared})">
+      <div class="kv-key">${key}</div>
+      <div class="kv-type"><span class="badge ${shared?'b-teal':'b-muted'}">${shared?'shared':'private'}</span></div>
+      <div class="kv-actions">
+        <button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();inspectKey('${key}',${shared})">👁</button>
+        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteKey('${key}','explorer',${shared})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function inspectKey(key, shared=false) {
+  const r = await storage.get(key, shared).catch(()=>null);
+  let parsed = r ? (() => { try { return JSON.parse(r.value); } catch{ return r.value; } })() : null;
+  showModal(`🔑 ${key}`, `
+    <div style="margin-bottom:12px;display:flex;gap:8px">
+      <span class="badge ${shared?'b-teal':'b-muted'}">${shared?'shared':'private'}</span>
+      <span class="badge b-muted">${r?.value?.length||0} chars</span>
+    </div>
+    <div class="code" style="font-size:10px;max-height:400px;overflow-y:auto">${JSON.stringify(parsed, null, 2).replace(/</g,'&lt;')}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-danger btn-sm" onclick="closeModal();deleteKey('${key}','explorer',${shared})">🗑 Delete Key</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="closeModal()">Close</button>
+    </div>`);
+}
+
+async function deleteKey(key, returnScreen, shared=false) {
+  await DataLayer._delete(key, shared);
+  toast(`Deleted: ${key}`, 'warn');
+  await refreshStorageCount();
+  await renderTableForCurrentScreen();
+  if (returnScreen==='explorer') await refreshExplorer();
+}
+
+// ── CRUD OPERATIONS LAB ────────────────────────────────────────
+const OP_FORMS = {
+  'cases.create': [
+    { name:'id', label:'Case Number', placeholder:'WAC2600234567' },
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'jurisdiction', label:'Jurisdiction', type:'select', options:['USCIS','IRCC','UKVI','DIBP','SCHENGEN'] },
+    { name:'visaType', label:'Visa Type', placeholder:'H-1B' },
+    { name:'status', label:'Status', type:'select', options:['pending','in_progress','rfe','approved','denied'] },
+    { name:'filedAt', label:'Filed At (ISO)', placeholder:'2026-01-01T00:00:00Z' },
+  ],
+  'cases.get': [{ name:'caseId', label:'Case ID', placeholder:'WAC2600234567' }],
+  'cases.list': [{ name:'userId', label:'User ID (optional)', placeholder:'usr_alex_j_001' }],
+  'cases.updateStatus': [
+    { name:'caseId', label:'Case ID', placeholder:'WAC2600234567' },
+    { name:'status', label:'New Status', type:'select', options:['pending','in_progress','rfe','approved','denied'] },
+  ],
+  'cases.appendTimeline': [
+    { name:'caseId', label:'Case ID', placeholder:'WAC2600234567' },
+    { name:'stage', label:'Stage', placeholder:'Biometrics' },
+    { name:'status', label:'Status', type:'select', options:['pending','active','done'] },
+    { name:'note', label:'Note', placeholder:'Appointment scheduled' },
+  ],
+  'docs.create': [
+    { name:'id', label:'Doc ID', placeholder:'doc_0001' },
+    { name:'caseId', label:'Case ID', placeholder:'WAC2600234567' },
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'name', label:'Filename', placeholder:'passport.pdf' },
+    { name:'type', label:'Type', type:'select', options:['petition','notice','id','education','employment','other'] },
+  ],
+  'docs.get': [{ name:'docId', label:'Doc ID', placeholder:'doc_4521' }],
+  'docs.setVerified': [
+    { name:'docId', label:'Doc ID', placeholder:'doc_4521' },
+    { name:'hash', label:'SHA-256 Hash', placeholder:'0x3f8a2c…' },
+  ],
+  'docs.storeOCR': [
+    { name:'docId', label:'Doc ID', placeholder:'doc_4521' },
+    { name:'confidence', label:'Confidence (0-1)', placeholder:'0.97' },
+    { name:'documentType', label:'Document Type', placeholder:'I-797C Notice' },
+    { name:'receiptNumber', label:'Receipt Number', placeholder:'WAC2600234567' },
+  ],
+  'notifs.push': [
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'type', label:'Type', type:'select', options:['status','deadline','document','ai','billing'] },
+    { name:'priority', label:'Priority', type:'select', options:['low','normal','high','urgent'] },
+    { name:'title', label:'Title', placeholder:'Case Status Updated' },
+    { name:'body', label:'Body', placeholder:'Your case has been approved!' },
+  ],
+  'notifs.markRead': [
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'notifIds', label:'Notif IDs (comma separated)', placeholder:'ntf_001,ntf_002' },
+  ],
+  'notifs.savePrefs': [
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'push', label:'Enable Push', type:'select', options:['true','false'] },
+    { name:'email', label:'Enable Email', type:'select', options:['true','false'] },
+    { name:'sms', label:'Enable SMS', type:'select', options:['true','false'] },
+    { name:'language', label:'Language Code', placeholder:'en' },
+  ],
+  'ai.storePrediction': [
+    { name:'caseId', label:'Case ID', placeholder:'WAC2600234567' },
+    { name:'model', label:'Model Name', placeholder:'H1B_XGB_v3' },
+    { name:'approvalProbability', label:'Approval Prob (0-1)', placeholder:'0.814' },
+    { name:'confidence', label:'Confidence (0-1)', placeholder:'0.82' },
+    { name:'timelineP50', label:'Median Days', placeholder:'180' },
+  ],
+  'ai.appendChat': [
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'role', label:'Role', type:'select', options:['user','assistant','system'] },
+    { name:'content', label:'Message', placeholder:'What is my visa status?' },
+    { name:'model', label:'Model', type:'select', options:['gpt-4-turbo','llama-3'] },
+  ],
+  'ai.getPrediction': [{ name:'caseId', label:'Case ID', placeholder:'WAC2600234567' }],
+  'chain.record': [
+    { name:'docId', label:'Doc ID', placeholder:'doc_4521' },
+    { name:'hash', label:'SHA-256 Hash', placeholder:'0x3f8a2c…' },
+    { name:'caseId', label:'Case ID (meta)', placeholder:'WAC2600234567' },
+  ],
+  'chain.verify': [
+    { name:'docId', label:'Doc ID', placeholder:'doc_4521' },
+    { name:'hash', label:'Hash to Verify', placeholder:'0x3f8a2c…' },
+  ],
+  'chain.issueVC': [
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'caseNumber', label:'Case Number', placeholder:'WAC2600234567' },
+    { name:'visaType', label:'Visa Type', placeholder:'H-1B' },
+  ],
+  'audit.log': [
+    { name:'type', label:'Event Type', type:'select', options:['LOGIN','LOGOUT','DATA_ACCESS','DATA_MODIFY','PERMISSION_CHANGE','API_CALL','PAYMENT','DOCUMENT_UPLOAD','BLOCKCHAIN_TX'] },
+    { name:'userId', label:'User ID', placeholder:'usr_alex_j_001' },
+    { name:'resource', label:'Resource', placeholder:'cases:case:WAC2600234567' },
+    { name:'outcome', label:'Outcome', type:'select', options:['success','denied','error'] },
+  ],
+  'raw.set': [
+    { name:'key', label:'Key', placeholder:'my-namespace:my-key' },
+    { name:'value', label:'Value (JSON string)', placeholder:'{"hello":"world"}' },
+    { name:'shared', label:'Shared', type:'select', options:['false','true'] },
+  ],
+  'raw.get': [
+    { name:'key', label:'Key', placeholder:'my-namespace:my-key' },
+    { name:'shared', label:'Shared', type:'select', options:['false','true'] },
+  ],
+  'raw.delete': [
+    { name:'key', label:'Key', placeholder:'my-namespace:my-key' },
+    { name:'shared', label:'Shared', type:'select', options:['false','true'] },
+  ],
+  'raw.list': [
+    { name:'prefix', label:'Prefix', placeholder:'cases:case:' },
+    { name:'shared', label:'Shared', type:'select', options:['false','true'] },
+  ],
+};
+
+function updateOpForm() {
+  const op = document.getElementById('opSelect')?.value;
+  const fields = OP_FORMS[op] || [];
+  const container = document.getElementById('opFormFields');
+  if (!container) return;
+  container.innerHTML = fields.map(f => `
+    <div class="field">
+      <label>${f.label}</label>
+      ${f.type==='select'
+        ? `<select id="opf_${f.name}">${f.options.map(o=>`<option>${o}</option>`).join('')}</select>`
+        : `<input id="opf_${f.name}" placeholder="${f.placeholder||''}">`
+      }
+    </div>`).join('');
+}
+
+function getOpField(name) {
+  const el = document.getElementById('opf_'+name);
+  return el ? el.value : '';
+}
+
+async function executeOp() {
+  const op = document.getElementById('opSelect')?.value;
+  const resultEl = document.getElementById('opResult');
+  let result;
+  try {
+    switch(op) {
+      case 'cases.create':
+        result = await DataLayer.cases.create({ id:getOpField('id'), userId:getOpField('userId'), jurisdiction:getOpField('jurisdiction'), visaType:getOpField('visaType'), status:getOpField('status'), tenantId:'ten_b2c_001', filedAt:getOpField('filedAt')||new Date().toISOString() }); break;
+      case 'cases.get':
+        result = await DataLayer.cases.get(getOpField('caseId')); break;
+      case 'cases.list':
+        result = await DataLayer.cases.list(getOpField('userId')||null); break;
+      case 'cases.updateStatus':
+        result = await DataLayer.cases.updateStatus(getOpField('caseId'), getOpField('status')); break;
+      case 'cases.appendTimeline':
+        result = await DataLayer.cases.appendTimeline(getOpField('caseId'), { stage:getOpField('stage'), status:getOpField('status'), note:getOpField('note'), date:new Date().toISOString(), source:'manual' }); break;
+      case 'docs.create':
+        result = await DataLayer.docs.create({ id:getOpField('id'), caseId:getOpField('caseId'), userId:getOpField('userId'), name:getOpField('name'), type:getOpField('type'), mimeType:'application/pdf', sizeBytes:1000000, s3Key:`visa-docs/${getOpField('id')}.pdf` }); break;
+      case 'docs.get':
+        result = await DataLayer.docs.get(getOpField('docId')); break;
+      case 'docs.setVerified':
+        result = await DataLayer.docs.setVerified(getOpField('docId'), getOpField('hash')); break;
+      case 'docs.storeOCR':
+        result = await DataLayer.docs.storeOCR(getOpField('docId'), { provider:'aws_textract', confidence:parseFloat(getOpField('confidence'))||0.97, fields:{ documentType:getOpField('documentType'), receiptNumber:getOpField('receiptNumber') }, rawText:'[OCR output…]' }); break;
+      case 'notifs.push':
+        result = await DataLayer.notifs.push(getOpField('userId'), { type:getOpField('type'), priority:getOpField('priority'), title:getOpField('title'), body:getOpField('body'), channels:['push','email'] }); break;
+      case 'notifs.markRead':
+        result = await DataLayer.notifs.markRead(getOpField('userId'), getOpField('notifIds').split(',').map(s=>s.trim())); break;
+      case 'notifs.savePrefs':
+        result = await DataLayer.notifs.savePrefs(getOpField('userId'), { push:getOpField('push')==='true', email:getOpField('email')==='true', sms:getOpField('sms')==='true', language:getOpField('language')||'en', statusUpdates:true, deadlineReminders:true, aiInsights:true }); break;
+      case 'ai.storePrediction':
+        result = await DataLayer.ai.storePrediction(getOpField('caseId'), { model:getOpField('model'), approvalProbability:parseFloat(getOpField('approvalProbability'))||0.8, confidence:parseFloat(getOpField('confidence'))||0.8, timelineP50:parseInt(getOpField('timelineP50'))||180, riskScore:0.3, riskFactors:[] }); break;
+      case 'ai.appendChat':
+        result = await DataLayer.ai.appendChat(getOpField('userId'), { role:getOpField('role'), content:getOpField('content'), model:getOpField('model')||'gpt-4-turbo', tokens:Math.ceil(getOpField('content').split(' ').length * 1.3) }); break;
+      case 'ai.getPrediction':
+        result = await DataLayer.ai.getPrediction(getOpField('caseId')); break;
+      case 'chain.record':
+        result = await DataLayer.chain.record(getOpField('docId'), getOpField('hash')||'0x'+Math.random().toString(16).slice(2,34), { caseId:getOpField('caseId') }); break;
+      case 'chain.verify':
+        result = await DataLayer.chain.verify(getOpField('docId'), getOpField('hash')); break;
+      case 'chain.issueVC':
+        result = await DataLayer.chain.issueVC(getOpField('userId'), { claims:{ caseNumber:getOpField('caseNumber'), visaType:getOpField('visaType') }, expiresAt:'2027-01-01T00:00:00Z' }); break;
+      case 'audit.log':
+        result = await DataLayer.audit.log({ type:getOpField('type'), userId:getOpField('userId'), resource:getOpField('resource'), outcome:getOpField('outcome'), metadata:{} }); break;
+      case 'raw.set':
+        result = await storage.set(getOpField('key'), getOpField('value'), getOpField('shared')==='true'); break;
+      case 'raw.get':
+        result = await storage.get(getOpField('key'), getOpField('shared')==='true'); break;
+      case 'raw.delete':
+        result = await storage.delete(getOpField('key'), getOpField('shared')==='true'); break;
+      case 'raw.list':
+        result = await storage.list(getOpField('prefix'), getOpField('shared')==='true'); break;
+      default: result = { error: 'Unknown operation' };
+    }
+    if (resultEl) resultEl.innerHTML = `<span class="ok">// ✓ Success</span>\n${JSON.stringify(result, null, 2).replace(/</g,'&lt;')}`;
+    log('crudLog','ok', op, result?JSON.stringify(result).slice(0,60)+'…':'null result');
+    toast(`${op} executed successfully`, 'ok');
+    await refreshStorageCount();
+  } catch(e) {
+    if (resultEl) resultEl.innerHTML = `<span class="err">// ✗ Error: ${e.message}</span>`;
+    log('crudLog','err', op, e.message);
+    toast(`Error: ${e.message}`, 'err');
+  }
+}
+
+// ── TTL CLEANUP ────────────────────────────────────────────────
+async function runTTLCleanup() {
+  log('migrationLog','info','TTL SWEEP','Starting TTL cleanup across all namespaces…');
+  const now = Date.now();
+  const privateKeys = await DataLayer._list('', false);
+  let deleted = 0;
+  const TTL_MAP = {
+    'cache:': 5*60*1000,      // 5 min
+    'users:session:': 24*60*60*1000, // 24h
+    'kafka:': 60*60*1000,     // 1h
+    'ai:chat:': 7*24*60*60*1000, // 7d
+    'ai:pred:': 24*60*60*1000,   // 24h
+    'notifs:list:': 30*24*60*60*1000, // 30d
+  };
+  for (const k of privateKeys) {
+    const ns = Object.keys(TTL_MAP).find(p => k.startsWith(p));
+    if (!ns) continue;
+    try {
+      const r = await storage.get(k, false);
+      if (!r) continue;
+      const data = JSON.parse(r.value);
+      const ts = data.cachedAt || data.expiresAt || data.issuedAt || data.createdAt;
+      if (ts && (now - new Date(ts).getTime()) > TTL_MAP[ns]) {
+        await DataLayer._delete(k, false);
+        deleted++;
+        log('migrationLog','warn','TTL DELETE', `${k} (expired ${Math.round((now-new Date(ts).getTime())/60000)}min ago)`);
+      }
+    } catch {}
+  }
+  log('migrationLog','ok','TTL SWEEP', `Complete — ${deleted} expired key${deleted!==1?'s':''} removed`);
+  toast(`TTL cleanup: ${deleted} expired keys removed`, deleted>0?'warn':'ok');
+  await refreshStorageCount();
+}
+
+// ── FLUSH ALL ─────────────────────────────────────────────────
+async function flushAll() {
+  showLoader();
+  const privateKeys = await DataLayer._list('', false);
+  const sharedKeys  = await DataLayer._list('', true);
+  for (const k of privateKeys) { try { await storage.delete(k, false); } catch{} }
+  for (const k of sharedKeys)  { try { await storage.delete(k, true); } catch{} }
+  await refreshStorageCount();
+  hideLoader();
+  toast('All storage flushed', 'warn');
+  log('overviewLog','warn','FLUSH ALL', `${privateKeys.length} private + ${sharedKeys.length} shared keys deleted`);
+  await renderTableForCurrentScreen();
+  if (document.getElementById('scr-explorer').classList.contains('on')) await refreshExplorer();
+}
+
+// ── STORAGE COUNT ──────────────────────────────────────────────
+async function refreshStorageCount() {
+  try {
+    const p = await DataLayer._list('', false);
+    const s = await DataLayer._list('', true);
+    const total = p.length + s.length;
+    document.getElementById('storageKeyCount').textContent = total;
+    document.getElementById('statKeys').textContent = total;
+    document.getElementById('statHealth').textContent = total > 0 ? 'OK' : '—';
+    document.getElementById('statHealthSub').textContent = total > 0 ? `${total} keys persisted ✓` : 'No data yet';
+  } catch(e) {
+    document.getElementById('storageKeyCount').textContent = '?';
+  }
+}
+
+// ── SCHEMA SPEC TABLE ─────────────────────────────────────────
+function buildSpecTable() {
+  const rows = [
+    // namespace, key-pattern, type, ttl, shared, description, owning service
+    ['users:', 'users:profile:{userId}', 'Object', '∞', 'No', 'Full user profile: identity, role, plan, MFA status', 'IAM Service'],
+    ['users:', 'users:session:{userId}', 'Object', '24h', 'No', 'JWT + refresh token + device ID + MFA verified flag', 'IAM Service'],
+    ['meta:', 'meta:tenant:{tenantId}', 'Object', '∞', 'Yes', 'Tenant configuration, API key hash, rate limits, data region', 'IAM / Admin'],
+    ['cases:', 'cases:case:{caseNumber}', 'Object', '∞', 'No', 'Full visa case record with status, deadlines, petitioner, timeline ref', 'Case Mgmt Svc'],
+    ['cases:', 'cases:timeline:{caseNumber}', 'Array', '∞', 'No', 'Ordered timeline events with stage, status, date, source', 'Case Mgmt Svc'],
+    ['docs:', 'docs:meta:{docId}', 'Object', '∞', 'No', 'Document metadata: name, type, S3 key, OCR/blockchain status', 'Document Svc'],
+    ['docs:', 'docs:ocr:{docId}', 'Object', '∞', 'No', 'OCR result: provider, confidence, extracted fields (NER output)', 'Document Svc / AI'],
+    ['notifs:', 'notifs:list:{userId}', 'Array', '30d', 'No', 'Notification list (max 100), ordered newest-first', 'Notification Svc'],
+    ['notifs:', 'notifs:prefs:{userId}', 'Object', '∞', 'No', 'Per-channel preferences, quiet hours, language (DeepL)', 'Notification Svc'],
+    ['billing:', 'billing:sub:{subId}', 'Object', '∞', 'No', 'Stripe subscription record: plan, status, period end, IDs', 'Billing Svc'],
+    ['billing:', 'billing:entitle:{userId}', 'Object', '∞', 'No', 'Feature entitlements derived from plan: maxCases, AI, API, etc.', 'Billing Svc'],
+    ['billing:', 'billing:invoice:{invoiceId}', 'Object', '∞', 'No', 'Invoice record: amount, status, PDF URL, paid timestamp', 'Billing Svc'],
+    ['ai:', 'ai:pred:{caseId}', 'Object', '24h', 'No', 'ML prediction: approval prob, confidence, P25/P50/P75 timeline, risk factors', 'AI/ML Svc'],
+    ['ai:', 'ai:chat:{userId}', 'Object', '7d', 'No', 'GPT-4 chat history (max 50 messages), token count, language', 'AI/ML Svc'],
+    ['chain:', 'chain:record:{docId}', 'Object', '∞', 'Yes', 'Blockchain hash record: SHA-256, block #, tx ID, Fabric confirmation', 'Blockchain Svc'],
+    ['chain:', 'chain:vc:{userId}', 'Object', '∞', 'Yes', 'W3C Verifiable Credential: claims, proof, status, expiry', 'Blockchain Svc'],
+    ['audit:', 'audit:event:{eventId}', 'Object', '7yr', 'Yes', 'Immutable audit event: type, actor, resource, outcome, timestamp', 'All Services'],
+    ['cache:', 'cache:govt-api:{jur}:{caseId}', 'Object', '15min', 'No', 'Government API response cache, invalidated on status change', 'Visa Aggregator'],
+    ['cache:', 'cache:ai-pred:{caseId}', 'Object', '1h', 'No', 'Short-term AI prediction cache for dashboard reads', 'AI/ML Svc'],
+    ['kafka:', 'kafka:queue:{topicName}', 'Array', '1h', 'No', 'Client-side Kafka event buffer for async processing', 'All Services'],
+    ['meta:', 'meta:schema:version', 'Object', '∞', 'Yes', 'Schema version, migration history, data lineage', 'Admin'],
+  ];
+  const table = document.getElementById('specTable');
+  if (!table) return;
+  table.innerHTML = `<thead><tr>
+    <th>Namespace</th><th>Key Pattern</th><th>Type</th><th>TTL</th><th>Shared</th><th>Description</th><th>Owner</th>
+  </tr></thead><tbody>${rows.map(([ns,key,type,ttl,shared,desc,owner]) => `
+    <tr>
+      <td class="key-col">${ns}</td>
+      <td class="key-col" style="font-size:9.5px">${key}</td>
+      <td class="type-col">${type}</td>
+      <td class="ttl-col">${ttl}</td>
+      <td><span class="badge ${shared==='Yes'?'b-teal':'b-muted'}">${shared}</span></td>
+      <td class="desc-col">${desc}</td>
+      <td class="owner-col">${owner}</td>
+    </tr>`).join('')}</tbody>`;
+}
+
+function exportSchema() {
+  const schema = {
+    version: '1.0.0',
+    generated: new Date().toISOString(),
+    platform: 'VisaTrack Pro',
+    storage: 'window.storage (key-value)',
+    namespaces: 11,
+    use_cases_covered: 33,
+    schema: [
+      { namespace:'users:', keys:['users:profile:{userId}','users:session:{userId}'], ttl:{profile:'∞',session:'24h'} },
+      { namespace:'cases:', keys:['cases:case:{caseNumber}','cases:timeline:{caseNumber}'], ttl:'∞' },
+      { namespace:'docs:', keys:['docs:meta:{docId}','docs:ocr:{docId}'], ttl:'∞' },
+      { namespace:'notifs:', keys:['notifs:list:{userId}','notifs:prefs:{userId}'], ttl:{list:'30d',prefs:'∞'} },
+      { namespace:'billing:', keys:['billing:sub:{subId}','billing:entitle:{userId}','billing:invoice:{invoiceId}'], ttl:'∞' },
+      { namespace:'ai:', keys:['ai:pred:{caseId}','ai:chat:{userId}'], ttl:{pred:'24h',chat:'7d'} },
+      { namespace:'chain:', keys:['chain:record:{docId}','chain:vc:{userId}'], shared:true, ttl:'∞' },
+      { namespace:'audit:', keys:['audit:event:{eventId}'], shared:true, ttl:'7yr' },
+      { namespace:'cache:', keys:['cache:govt-api:{jurisdiction}:{caseId}','cache:ai-pred:{caseId}'], ttl:{govt:'15min',ai:'1h'} },
+      { namespace:'kafka:', keys:['kafka:queue:{topicName}'], ttl:'1h' },
+      { namespace:'meta:', keys:['meta:tenant:{tenantId}','meta:schema:version'], shared:true, ttl:'∞' },
+    ]
+  };
+  const blob = new Blob([JSON.stringify(schema, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'visatrack_storage_schema_v1.json'; a.click();
+  toast('Schema exported as JSON', 'ok');
+}
+
+// ── LOADER ────────────────────────────────────────────────────
+function showLoader() { document.body.insertAdjacentHTML('beforeend', `<div id="loaderVeil" style="position:fixed;inset:0;background:rgba(7,9,15,.85);z-index:999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)"><div style="text-align:center"><div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div><div style="font-family:var(--mono);font-size:11px;color:var(--ice2)">Processing…</div></div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>`); }
+function hideLoader() { document.getElementById('loaderVeil')?.remove(); }
+
+function clearLog(id) { const el = document.getElementById(id); if(el) el.innerHTML=''; }
+
+// ── QUICK ACTIONS ─────────────────────────────────────────────
+function openCreateUser() { go('operations'); document.getElementById('opSelect').value='raw.set'; updateOpForm(); document.getElementById('opf_key').value='users:profile:usr_new'; document.getElementById('opf_value').value=JSON.stringify({id:'usr_new',email:'new@example.com',firstName:'New',lastName:'User',role:'applicant',plan:'free',tenantId:'ten_b2c_001'},null,2); }
+function openCreateCase() { go('operations'); document.getElementById('opSelect').value='cases.create'; updateOpForm(); }
+function openCreateDoc() { go('operations'); document.getElementById('opSelect').value='docs.create'; updateOpForm(); }
+
+// ── INIT ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  buildSpecTable();
+  updateOpForm();
+  await refreshStorageCount();
+
+  // Store schema version
+  await storage.set('meta:schema:version', JSON.stringify({ version:'1.0.0', createdAt: new Date().toISOString() }), true).catch(()=>{});
+
+  log('overviewLog','ok','INIT','VisaTrack Pro Data Layer v1.0.0 initialized');
+  log('overviewLog','info','STORAGE','window.storage API connected — 11 namespaces registered');
+  log('overviewLog','info','SCHEMA','Key convention: {namespace}:{entity}:{id}[:{subkey}]');
+  log('overviewLog','info','TTL','Enforcement: session=24h, cache=15min, ai=7d/24h, audit=7yr');
+
+  // Auto seed on first load if no data
+  const keys = await DataLayer._list('', false).catch(()=>[]);
+  if (keys.length === 0) {
+    log('overviewLog','warn','SEED','No existing data detected — run "Seed Data" to populate');
+  } else {
+    log('overviewLog','ok','DATA',`Found ${keys.length} existing private keys in storage`);
+  }
+
+  // Live log pump
+  const LIVE_EVENTS = [
+    ['ok','POLL USCIS','WAC2600234567 → cache:govt-api:USCIS:WAC2600234567 TTL:15min'],
+    ['ok','KAFKA CONSUME','case-status-events → cases:case:WAC2600234567 status:updated'],
+    ['ok','AI RESCORE','ai:pred:WAC2600234567 approval_prob:0.814 → stored + WS push'],
+    ['info','CACHE HIT','cache:ai-pred:WAC2600234567 age:4min returning cached result'],
+    ['ok','NOTIF PUSH','notifs:list:usr_alex_j_001 new event prepended channels:[push,email]'],
+    ['ok','AUDIT','audit:event:evt_1743… LOGIN usr_alex_j_001 → OpenSearch forwarded'],
+    ['ok','CHAIN VERIFY','chain:record:doc_4521 hash match=true block:#847291 ✓'],
+    ['warn','TTL CHECK','ai:pred:SRC2600456789 age:23h approaching 24h expiry — will re-score'],
+    ['ok','ENTITLE CHK','billing:entitle:usr_alex_j_001 plan:premium aiEnabled:true → ALLOW'],
+  ];
+  let liveIdx = 0;
+  setInterval(() => {
+    const e = LIVE_EVENTS[liveIdx % LIVE_EVENTS.length]; liveIdx++;
+    log('overviewLog', e[0], e[1], e[2]);
+  }, 3500);
+});
+</script>
+</body>
+</html>
